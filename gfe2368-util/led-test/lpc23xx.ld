@@ -1,0 +1,1 @@
+../../liblpc23xx/startup/lpc2378.ld

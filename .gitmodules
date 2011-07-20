@@ -1,0 +1,3 @@
+[submodule "liblpc23xx"]
+	path = liblpc23xx
+	url = git+ssh://magpie/vc/git/liblpc23xx.git

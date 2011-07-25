@@ -12,6 +12,7 @@
 #include "lpc23xx-uart.h"
 #include "lpc23xx-util.h"
 
+#include "gfe2368-info.h"
 #include "gfe2368-util.h"
 #include "led-test.h"
 
@@ -26,6 +27,12 @@ int main (void) {
     uart0_init_115200() ;
 
     uart0_putstring("\n***Starting gfe led test***\n\n");
+    
+    uart0_putstring("\n***Board is defined as: ");
+
+    uart0_putstring(infoquery_boardtag());
+
+    uart0_putstring(" ***\n");
 
     stat_led_flash_fast(cycles);
 

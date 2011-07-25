@@ -23,7 +23,7 @@ DEBUG           ?=
 #DEBUG           = -DDEBUG
                   
 #CFLAGS          ?= $(INCLUDE) $(DEBUG) $(LPC2378_PORT) -ggdb -c -Wall -Werror -fno-common -O2 -mfloat-abi=softfp -mcpu=arm7tdmi-s
-CFLAGS          ?= $(INCLUDE) $(DEBUG) $(USB_PORT) -ggdb -c -Wall -fno-common -O0 -mfloat-abi=softfp -mcpu=arm7tdmi-s
+CFLAGS          ?= $(INCLUDE) $(DEBUG) $(USB_PORT) $(BOARD_NUM) -ggdb -c -Wall -fno-common -O0 -mfloat-abi=softfp -mcpu=arm7tdmi-s
 
 ASFLAGS         ?= -ggdb -ahls -mfloat-abi=softfp $(INCLUDE)
 

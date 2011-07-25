@@ -16,7 +16,7 @@ OD              := $(CROSS)/bin/arm-elf-objdump
 
 TYPE            ?= lpc23xx
 
-TARGET          ?=
+BOARD_NUM       ?= -DBOARD_ONE
 
 USB_PORT        := -DLPC2378_PORTB
 
@@ -29,6 +29,7 @@ INCLUDE         := -I$(LPCLIBDIR)/include\
 		   -I$(LPCLIBDIR)/lpc23xx-vic/include\
 		   -I$(LPCLIBDIR)/lpc23xx-util/include\
 		   -I$(LPCLIBDIR)/lpc23xx-uart/include\
+                   -I./gfe2368-info/include\
                    -I./gfe2368-util/include
 	
 HS              :=  $(wildcard ./include/*.h)\
@@ -53,7 +54,7 @@ COBJS           = $(CSRCS:.c=.o)
 
 AOBJS           = $(ASRCS:.s=.o)
                   
-#CFLAGS          = $(INCLUDE) $(DEBUG) $(USB_PORT) -ggdb -c -Wall -Werror -mfloat-abi=softfp -fno-common -O2 -mcpu=arm7tdmi-s
+#CFLAGS          = $(INCLUDE) $(DEBUG) $(USB_PORT) $(BOARD_NUM) -ggdb -c -Wall -Werror -mfloat-abi=softfp -fno-common -O2 -mcpu=arm7tdmi-s
 CFLAGS          = $(INCLUDE) $(DEBUG) $(USB_PORT) -ggdb -c -Wall -mfloat-abi=softfp -fno-common -O0 -mcpu=arm7tdmi-s
 
 ARCHIVEFLAGS    = rvs

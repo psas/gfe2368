@@ -24,13 +24,15 @@ int main (void) {
  //   pllstart_sixtymhz() ;
  //   pllstart_fourtyeightmhz() ;
 
+    info_init();
+
     uart0_init_115200() ;
 
     uart0_putstring("\n***Starting gfe led test***\n\n");
     
     uart0_putstring("\n***Board is defined as: ");
 
-    uart0_putstring(infoquery_boardtag());
+    uart0_putstring( infoquery_gfe_boardtag() );
 
     uart0_putstring(" ***\n");
 

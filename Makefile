@@ -16,9 +16,10 @@ OD              := $(CROSS)/bin/arm-elf-objdump
 
 TYPE            ?= lpc23xx
 
-BOARD_NUM       ?= -DBOARD_ONE
+GFE_BOARD_NUM   ?=
+#GFE_BOARD_NUM   ?= -DBOARD_THREE
 
-USB_PORT        := -DLPC2378_PORTB
+#USB_PORT        := -DLPC2378_PORTB
 
 DEBUG           ?=
 #DEBUG           = -DDEBUG
@@ -54,8 +55,7 @@ COBJS           = $(CSRCS:.c=.o)
 
 AOBJS           = $(ASRCS:.s=.o)
                   
-#CFLAGS          = $(INCLUDE) $(DEBUG) $(USB_PORT) $(BOARD_NUM) -ggdb -c -Wall -Werror -mfloat-abi=softfp -fno-common -O2 -mcpu=arm7tdmi-s
-CFLAGS          = $(INCLUDE) $(DEBUG) $(USB_PORT) -ggdb -c -Wall -mfloat-abi=softfp -fno-common -O0 -mcpu=arm7tdmi-s
+CFLAGS          = $(INCLUDE) $(DEBUG) $(USB_PORT) $(GFE_BOARD_NUM) -ggdb -c -Wall -Werror -mfloat-abi=softfp -fno-common -O0 -mcpu=arm7tdmi-s
 
 ARCHIVEFLAGS    = rvs
 
@@ -67,7 +67,7 @@ ASFLAGS         = -ggdb -ahls -mfloat-abi=softfp $(INCLUDE)
 
 .c.o :
 	@echo "======== COMPILING $@ ========================"
-	@$(CC) $(CFLAGS) -o $(<:.c=.o) -c $<
+	$(CC) $(CFLAGS) -o $(<:.c=.o) -c $<
 
 .s.o :
 	@echo "======== COMPILING $@ ========================"
@@ -82,21 +82,20 @@ $(COBJS): $(HS)
 
 $(EXLIBS): 
 	@echo "========= Recursive make: $(@D)    ========================"
-	@$(MAKE) USB_PORT=$(USB_PORT) DEBUG=$(DEBUG) -s -C $(@D) $(@F)
+	@$(MAKE) -s USB_PORT=$(USB_PORT) DEBUG=$(DEBUG) -s -C $(@D) $(@F)
 
 $(LIBS): $(AOBJS) $(COBJS) $(EXLIBS)
 	@echo "========= Making Library $@ ========================"
-	$(AR) $(ARCHIVEFLAGS) $@ $(AOBJS) $(COBJS)
+	@$(AR) $(ARCHIVEFLAGS) $@ $(AOBJS) $(COBJS)
 
 $(TESTS): $(LIBS) $(ASRCS) $(CSRCS) $(TESTSRCS)
 	@echo "========= Recursive make: $(@D) ========================"
-	$(MAKE) -s -C $(@D) $(@F)
+	@$(MAKE) -s -C $(@D) $(@F)
 
 clean:
 	@$(RM)  $(LIBS) $(AOBJS) $(COBJS) $(COBJS) \
 	*.map *.hex *.bin *.lst *~ ./include/*~ a.out 
-	$(MAKE) -s -C gfe2368-util/led-test clean
-	#$(MAKE) -s -C gfe2368-i2c/blinkm-test clean
+	@$(MAKE) -s -C gfe2368-util/led-test clean
 
 allclean: clean
 	@$(MAKE) -s -C liblpc23xx clean

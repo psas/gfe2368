@@ -1,0 +1,7 @@
+
+liblpc23xx.git is a git submodule.
+
+After cloning repository:
+
+git submodule init
+git submodule update

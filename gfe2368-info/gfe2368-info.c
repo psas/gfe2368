@@ -5,36 +5,72 @@
  */
 
 #include <stdint.h>
+#include <string.h>
+
 #include "lpc23xx.h"
+#include "lpc23xx-uart.h"
+#include "printf-lpc.h"
 
 #include "gfe2368-info.h"
 
+gfe2368_info_s __attribute__ ((unused)) brd ;
+
+void info_init() {
+
 #ifdef BOARD_ONE
-   gfe2368_info brd __attribute__ ((unused)) = { .boardtag = "board_one" };
+    char *comment = "board one";
+    strncpy(brd.boardtag, comment, strlen(comment));
+    brd.boardtag[strlen(comment)] = '\0';
+
 #elif BOARD_TWO
-   gfe2368_info brd __attribute__ ((unused)) = { .boardtag = "board_two" };
+    char *comment = "board two";
+    strncpy(brd.boardtag, comment, strlen(comment));
+    brd.boardtag[strlen(comment)] = '\0';
+
 #elif BOARD_THREE
-   gfe2368_info brd __attribute__ ((unused)) = { .boardtag = "board_three" };
+    char *comment = "board three";
+    strncpy(brd.boardtag, comment, strlen(comment));
+    brd.boardtag[strlen(comment)] = '\0';
+
 #elif BOARD_FOUR
-   gfe2368_info brd __attribute__ ((unused)) = { .boardtag = "board_four" };
+    char *comment = "board four";
+    strncpy(brd.boardtag, comment, strlen(comment));
+    brd.boardtag[strlen(comment)] = '\0';
+
 #elif BOARD_FIVE
-   gfe2368_info brd __attribute__ ((unused)) = { .boardtag = "board_five" };
+    char *comment = "board five";
+    strncpy(brd.boardtag, comment, strlen(comment));
+    brd.boardtag[strlen(comment)] = '\0';
+
 #elif BOARD_SIX
-   gfe2368_info brd __attribute__ ((unused)) = { .boardtag = "board_six" };
+    char *comment = "board six";
+    strncpy(brd.boardtag, comment, strlen(comment));
+    brd.boardtag[strlen(comment)] = '\0';
+
 #elif BOARD_SEVEN
-   gfe2368_info brd __attribute__ ((unused)) = { .boardtag = "board_seven" };
+    char *comment = "board seven";
+    strncpy(brd.boardtag, comment, strlen(comment));
+    brd.boardtag[strlen(comment)] = '\0';
+
 #elif BOARD_EIGHT
-   gfe2368_info brd __attribute__ ((unused)) = { .boardtag = "board_eight" };
-#elif BOARD_NINE
-   gfe2368_info brd __attribute__ ((unused)) = { .boardtag = "board_nine" };
+    char *comment = "board eight";
+    strncpy(brd.boardtag, comment, strlen(comment));
+    brd.boardtag[strlen(comment)] = '\0';
+
 #else
-   gfe2368_info_s brd __attribute__ ((unused)) = { .boardtag = "undefined" };
+    char *comment = "unknown";
+    strncpy(brd.boardtag, comment, strlen(comment));
+    brd.boardtag[strlen(comment)] = '\0';
 #endif
+
+}
 
 /*
  * infoquery_board
+ * must call info_init first
  */
-char*    infoquery_boardtag(void) {
-    return(brd.boardtag);
+const char*    infoquery_gfe_boardtag(void) {
+//    printf_lpc(UART0,"Return of boardtag: %s\n", brd.boardtag);
+    return((const char*) brd.boardtag);
 }
 

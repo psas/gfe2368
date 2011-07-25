@@ -16,7 +16,6 @@ INCLUDE         := -I.\
                    -I$(LIBDIR)/gfe2368-info/include\
                    -I$(LIBDIR)/gfe2368-util/include
 
-BOARD_NUM       := -DBOARD_ONE
+GFE_BOARD_NUM   := -DBOARD_SIX
 include $(LIBDIR)/include/common-test-make.mk
-
 

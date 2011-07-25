@@ -18,12 +18,13 @@ OD              := $(CROSS)/bin/arm-elf-objdump
 
 TYPE            ?= lpc23xx
 
-LPC2378_PORT    = -DLPC2378_PORTB
+#GFE_BOARD_NUM   ?=
+#LPC2378_PORT    = -DLPC2378_PORTB
+
 DEBUG           ?=
 #DEBUG           = -DDEBUG
                   
-#CFLAGS          ?= $(INCLUDE) $(DEBUG) $(LPC2378_PORT) -ggdb -c -Wall -Werror -fno-common -O2 -mfloat-abi=softfp -mcpu=arm7tdmi-s
-CFLAGS          ?= $(INCLUDE) $(DEBUG) $(USB_PORT) $(BOARD_NUM) -ggdb -c -Wall -fno-common -O0 -mfloat-abi=softfp -mcpu=arm7tdmi-s
+CFLAGS          ?= $(INCLUDE) $(DEBUG) $(USB_PORT) $(GFE_BOARD_NUM) -ggdb -c -Wall -Werror -fno-common -O0 -mfloat-abi=softfp -mcpu=arm7tdmi-s
 
 ASFLAGS         ?= -ggdb -ahls -mfloat-abi=softfp $(INCLUDE)
 
@@ -65,7 +66,7 @@ $(COBJS): include/*.h
 
 $(EXLIBS):
 	@echo "========= Recursive make: $(@D)    ========================"
-	@$(MAKE) -s -C $(@D) DEBUG=$(DEBUG) USB_PORT=$(USB_PORT) $(@F)
+	$(MAKE) -s -C $(@D) DEBUG=$(DEBUG) USB_PORT=$(USB_PORT) GFE_BOARD_NUM=$(GFE_BOARD_NUM) $(@F)
 
 $(PROGS): $(AOBJS) $(COBJS) $(EXLIBS)
 	@echo "========= LINKING $@ ========================"
@@ -87,9 +88,8 @@ clean:
 
 allclean: clean
 	$(MAKE)  -s -C $(LIBDIR) allclean
+	$(MAKE)  -s -C $(LPCLIBDIR) allclean
 
 rebuild: allclean
-	$(MAKE)  -s -C $(LPCLIBDIR) rebuild
-	$(MAKE)  -s -C $(LIBDIR) rebuild
 	$(MAKE)
 

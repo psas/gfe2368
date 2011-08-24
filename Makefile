@@ -16,7 +16,7 @@ OD              := $(CROSS)/bin/arm-elf-objdump
 
 TYPE            ?= lpc23xx
 
-GFE_BOARD_NUM   ?=
+GFE_BOARD_NUM   ?= -DBOARD_ONE
 #GFE_BOARD_NUM   ?= -DBOARD_THREE
 
 #USB_PORT        := -DLPC2378_PORTB
@@ -41,8 +41,6 @@ EXLIBS          = ./liblpc23xx/liblpc23xx.a
 LIBS            = $(NAME).a
 
 TESTS           = ./gfe2368-util/led-test/led-test.hex
-		  #./gfe2368-i2c/blinkm-test/blinkm-test.hex\
-		  #./gfe2368-usb/echo-test/echo-test.hex
 		  
 TESTSRCS        = $(wildcard gfe2368-*/*test/*c)
 TESTOBJS        = $(TESTSRCS:.c=.o)
@@ -67,7 +65,7 @@ ASFLAGS         = -ggdb -ahls -mfloat-abi=softfp $(INCLUDE)
 
 .c.o :
 	@echo "======== COMPILING $@ ========================"
-	$(CC) $(CFLAGS) -o $(<:.c=.o) -c $<
+	@$(CC) $(CFLAGS) -o $(<:.c=.o) -c $<
 
 .s.o :
 	@echo "======== COMPILING $@ ========================"

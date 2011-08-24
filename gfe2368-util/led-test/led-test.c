@@ -28,7 +28,7 @@ int main (void) {
 
     uart0_init_115200() ;
 
-    uart0_putstring("\n***Starting gfe led test***\n\n");
+    uart0_putstring("\n***Starting gfe color led test***\n\n");
     
     uart0_putstring("\n***Board is defined as: ");
 
@@ -36,7 +36,9 @@ int main (void) {
 
     uart0_putstring(" ***\n");
 
-    stat_led_flash_fast(cycles);
+    color_led_flash(5, RED_LED,   FLASH_NORMAL ) ;
+    color_led_flash(5, BLUE_LED,  FLASH_NORMAL ) ;
+    color_led_flash(5, GREEN_LED, FLASH_NORMAL ) ;
 
     // negative numbers in itoa
     uart0_putstring("Print a negative number: ");
@@ -46,7 +48,6 @@ int main (void) {
     uart0_putstring("Print a negative number: ");
     uart0_putstring(util_itoa(-42, 16));
     uart0_putstring("\n");
-
 
     uart0_putstring("0b");
     uart0_putstring(util_itoa(cycles,2));

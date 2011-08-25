@@ -38,6 +38,8 @@ typedef enum {FLASH_SLOW=0, FLASH_NORMAL, FLASH_FAST} flashspeed_type;
 typedef enum {RED_LED=0, BLUE_LED, GREEN_LED} ledcolor_type;
 
 void init_color_led() ;
+void all_led_off() ;
+void cycle_led() ;
 void color_led_flash(uint32_t cycles, ledcolor_type led, flashspeed_type speed ) ;
 
 

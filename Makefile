@@ -19,9 +19,15 @@ TYPE            ?= lpc23xx
 GFE_BOARD_NUM   ?= -DBOARD_ONE
 #GFE_BOARD_NUM   ?= -DBOARD_THREE
 
-#USB_PORT        := -DLPC2378_PORTB
+# GFE have at least one circuit error in USB connections
+LPC23XX_PART    ?= -DGFE_LPC2368
 
-DEBUG           ?=
+##
+# If you are using port B the LPC2378 uncomment out the next line.
+# this is the default, make LPC2378_PORT= will overwrite
+#LPC2378_PORT    = -DLPC2378_PORTB
+
+DEBUG           ?= -g
 #DEBUG           = -DDEBUG
  
 INCLUDE         := -I$(LPCLIBDIR)/include\
@@ -53,7 +59,7 @@ COBJS           = $(CSRCS:.c=.o)
 
 AOBJS           = $(ASRCS:.s=.o)
                   
-CFLAGS          = $(INCLUDE) $(DEBUG) $(USB_PORT) $(GFE_BOARD_NUM) -ggdb -c -Wall -Werror -mfloat-abi=softfp -fno-common -O0 -mcpu=arm7tdmi-s
+CFLAGS          = $(INCLUDE) $(DEBUG) $(LPC23XX_PORT) $(LPC23XX_PART) $(GFE_BOARD_NUM) -c -Wall -Werror -mfloat-abi=softfp -fno-common -O0 -mcpu=arm7tdmi-s
 
 ARCHIVEFLAGS    = rvs
 
@@ -94,6 +100,7 @@ clean:
 	@$(RM)  $(LIBS) $(AOBJS) $(COBJS) $(COBJS) \
 	*.map *.hex *.bin *.lst *~ ./include/*~ a.out 
 	@$(MAKE) -s -C gfe2368-util/led-test clean
+	@$(MAKE) -s -C gfe2368-usb/datapath-test clean
 
 allclean: clean
 	@$(MAKE) -s -C liblpc23xx clean

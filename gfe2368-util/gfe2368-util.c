@@ -33,6 +33,35 @@ void init_color_led() {
 }
 
 /*
+ * all_led_off
+ */
+void all_led_off() {
+    RED_LED_OFF;
+    GREEN_LED_OFF;
+    BLUE_LED_OFF;
+}
+
+
+/*
+ * cycle_led
+ */
+void cycle_led() {
+
+    RED_LED_ON;
+    util_wait_msecs(1000) ;
+    RED_LED_OFF;
+
+    BLUE_LED_ON;
+    util_wait_msecs(1000) ;
+    BLUE_LED_OFF;
+
+    GREEN_LED_ON;
+    util_wait_msecs(1000) ;
+    GREEN_LED_OFF;
+
+}
+
+/*
  * color_led_flash
  */
 void color_led_flash(uint32_t cycles, 
@@ -137,6 +166,19 @@ void color_led_flash(uint32_t cycles,
             }
             if(cycles==0) break;
         }
+    }
+    switch(led) {
+        case RED_LED:
+            RED_LED_OFF;
+            break;
+        case BLUE_LED:
+            BLUE_LED_OFF;
+            break;
+        case GREEN_LED:
+            GREEN_LED_OFF;
+            break;
+        default:
+            break;
     }
 }
 

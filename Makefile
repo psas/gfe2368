@@ -46,7 +46,8 @@ EXLIBS          = ./liblpc23xx/liblpc23xx.a
 
 LIBS            = $(NAME).a
 
-TESTS           = ./gfe2368-util/led-test/led-test.hex
+TESTS           = ./gfe2368-util/led-test/led-test.hex\
+	          ./gfe2368-usb/datapath-test/datapath-test.hex
 		  
 TESTSRCS        = $(wildcard gfe2368-*/*test/*c)
 TESTOBJS        = $(TESTSRCS:.c=.o)

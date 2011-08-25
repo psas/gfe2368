@@ -18,6 +18,7 @@ gfe2368_info_s __attribute__ ((unused)) brd ;
 void info_init() {
 
 #ifdef BOARD_ONE
+    printf_lpc(UART0, "board_one\n");
     char *comment = "board one";
     strncpy(brd.boardtag, comment, strlen(comment));
     brd.boardtag[strlen(comment)] = '\0';

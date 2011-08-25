@@ -12,9 +12,9 @@
 
 #define MAX_I2ASTRING        33
 
-#define RED_LED_PIN          22
-#define BLUE_LED_PIN         25
-#define GREEN_LED_PIN        19
+#define RED_LED_PIN          19
+#define BLUE_LED_PIN         22
+#define GREEN_LED_PIN        25
 
 #define RED_LED_ENABLE       ( FIO1DIR |= (1 << RED_LED_PIN) )
 #define RED_LED_DISABLE      ( FIO1DIR = FIO1DIR & (~(1<<RED_LED_PIN)) )
@@ -25,14 +25,14 @@
 #define GREEN_LED_ENABLE      ( FIO1DIR |= (1 << GREEN_LED_PIN) )
 #define GREEN_LED_DISABLE     ( FIO1DIR = FIO1DIR & (~(1<<GREEN_LED_PIN)) )
 
-#define RED_LED_ON           ( FIO1CLR = (1 << RED_LED_PIN) )
-#define RED_LED_OFF          ( FIO1SET = (1 << RED_LED_PIN) )
+#define RED_LED_ON           ( FIO1SET = (1 << RED_LED_PIN) )
+#define RED_LED_OFF          ( FIO1CLR = (1 << RED_LED_PIN) )
 
-#define BLUE_LED_ON          ( FIO1CLR = (1 << BLUE_LED_PIN) )
-#define BLUE_LED_OFF         ( FIO1SET = (1 << BLUE_LED_PIN) )
+#define BLUE_LED_ON          ( FIO1SET = (1 << BLUE_LED_PIN) )
+#define BLUE_LED_OFF         ( FIO1CLR = (1 << BLUE_LED_PIN) )
 
-#define GREEN_LED_ON         ( FIO1CLR = (1 << GREEN_LED_PIN) )
-#define GREEN_LED_OFF        ( FIO1SET = (1 << GREEN_LED_PIN) )
+#define GREEN_LED_ON         ( FIO1SET = (1 << GREEN_LED_PIN) )
+#define GREEN_LED_OFF        ( FIO1CLR = (1 << GREEN_LED_PIN) )
 
 typedef enum {FLASH_SLOW=0, FLASH_NORMAL, FLASH_FAST} flashspeed_type;
 typedef enum {RED_LED=0, BLUE_LED, GREEN_LED} ledcolor_type;

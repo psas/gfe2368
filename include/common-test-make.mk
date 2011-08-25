@@ -21,10 +21,10 @@ TYPE            ?= lpc23xx
 #GFE_BOARD_NUM   ?=
 #LPC2378_PORT    = -DLPC2378_PORTB
 
-DEBUG           ?=
-#DEBUG           = -DDEBUG
+DEBUG           ?= -g
+#DEBUG           = -g -DDEBUG
                   
-CFLAGS          ?= $(INCLUDE) $(DEBUG) $(USB_PORT) $(GFE_BOARD_NUM) -ggdb -c -Wall -Werror -fno-common -O0 -mfloat-abi=softfp -mcpu=arm7tdmi-s
+CFLAGS          ?= $(INCLUDE) $(DEBUG) $(USB_PORT) $(GFE_BOARD_NUM) -c -Wall -Werror -fno-common -O0 -mfloat-abi=softfp -mcpu=arm7tdmi-s
 
 ASFLAGS         ?= -ggdb -ahls -mfloat-abi=softfp $(INCLUDE)
 
@@ -70,7 +70,7 @@ $(EXLIBS):
 
 $(PROGS): $(AOBJS) $(COBJS) $(EXLIBS)
 	@echo "========= LINKING $@ ========================"
-	@$(LD) $(LDFLAGS) -o $@ $(AOBJS) $(COBJS) $(EXLIBS) -L$(CROSS)/arm-elf/lib -lc -L$(CROSS)/lib/gcc/arm-elf/$(GCC_VERSION) -lgcc
+	@$(LD) $(LDFLAGS) -o $@ $(AOBJS) $(COBJS) $(EXLIBS) -L$(CROSS)/arm-elf/lib -lc -lm -L$(CROSS)/lib/gcc/arm-elf/$(GCC_VERSION) -lgcc
 
 $(NAME).hex: $(NAME).out
 	@echo "========= .hex file for $< =================="

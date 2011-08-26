@@ -27,7 +27,7 @@ LPC23XX_PART    ?= -DGFE_LPC2368
 # this is the default, make LPC2378_PORT= will overwrite
 #LPC2378_PORT    = -DLPC2378_PORTB
 
-DEBUG           ?= -g
+DEBUG           += -g
 #DEBUG           = -DDEBUG
  
 INCLUDE         := -I$(LPCLIBDIR)/include\

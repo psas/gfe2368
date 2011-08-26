@@ -19,12 +19,16 @@ OD              := $(CROSS)/bin/arm-elf-objdump
 TYPE            ?= lpc23xx
 
 #GFE_BOARD_NUM   ?=
+
+# GFE have at least one circuit error in USB connections
+LPC23XX_PART    ?= -DGFE_LPC2368
+
 #LPC2378_PORT    = -DLPC2378_PORTB
 
 DEBUG           ?= -g
 #DEBUG           = -g -DDEBUG
                   
-CFLAGS          ?= $(INCLUDE) $(DEBUG) $(USB_PORT) $(GFE_BOARD_NUM) -c -Wall -Werror -fno-common -O3 -mfloat-abi=softfp -mcpu=arm7tdmi-s
+CFLAGS          ?= $(INCLUDE) $(DEBUG) $(LPC23XX_PART) $(LPC2378_PORT) $(GFE_BOARD_NUM) -c -Wall -Werror -fno-common -O3 -mfloat-abi=softfp -mcpu=arm7tdmi-s
 
 ASFLAGS         ?= -g -ahls -mfloat-abi=softfp $(INCLUDE)
 
@@ -66,7 +70,7 @@ $(COBJS): include/*.h
 
 $(EXLIBS):
 	@echo "========= Recursive make: $(@D)    ========================"
-	$(MAKE) -s -C $(@D) DEBUG=$(DEBUG) USB_PORT=$(USB_PORT) GFE_BOARD_NUM=$(GFE_BOARD_NUM) $(@F)
+	$(MAKE) -s -C $(@D) DEBUG=$(DEBUG) LPC23XX_PART=$(LPC23XX_PART) LPC2378_PORT=$(LPC2378_PORT) GFE_BOARD_NUM=$(GFE_BOARD_NUM) $(@F)
 
 $(PROGS): $(AOBJS) $(COBJS) $(EXLIBS)
 	@echo "========= LINKING $@ ========================"

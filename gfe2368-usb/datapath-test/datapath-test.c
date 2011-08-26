@@ -459,7 +459,11 @@ static void stream_task() {
         		runstate_g.state = STOP;
 				DBG(UART0,"Stop detected\n");
 			} else if (c == 'm' ) {
+    printf_lpc(UART0,"\nOptions: (s)-stop, (r)-reset, (g)-go, (f)-flush host buffer, (q)-quit\n");
 				DBG(UART0,"Menu detected\n");
+			} else if (c == 'q' ) {
+				runstate_g.state = RESET;
+				DBG(UART0,"Quit detected\n");
 			} else if (c == 'r' ) {
 				runstate_g.state = RESET;
 				DBG(UART0,"Reset detected\n");

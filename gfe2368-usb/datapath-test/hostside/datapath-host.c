@@ -154,6 +154,7 @@ void datapath_task(const char* portname, const char* logfile, int quiet) {
         fprintf(stderr,"flush port failed.\n");
         exit(EXIT_FAILURE);
     }
+    printf("\nOptions: (s)-stop, (r)-reset, (g)-go, (f)-flush host buffer, (q)-quit\n");
     while(1) {
         bytes_stdin = read(0, &value_stdin, 1);
         if(bytes_stdin < 0) {

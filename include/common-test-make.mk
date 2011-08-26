@@ -24,9 +24,9 @@ TYPE            ?= lpc23xx
 DEBUG           ?= -g
 #DEBUG           = -g -DDEBUG
                   
-CFLAGS          ?= $(INCLUDE) $(DEBUG) $(USB_PORT) $(GFE_BOARD_NUM) -c -Wall -Werror -fno-common -O0 -mfloat-abi=softfp -mcpu=arm7tdmi-s
+CFLAGS          ?= $(INCLUDE) $(DEBUG) $(USB_PORT) $(GFE_BOARD_NUM) -c -Wall -Werror -fno-common -O3 -mfloat-abi=softfp -mcpu=arm7tdmi-s
 
-ASFLAGS         ?= -ggdb -ahls -mfloat-abi=softfp $(INCLUDE)
+ASFLAGS         ?= -g -ahls -mfloat-abi=softfp $(INCLUDE)
 
 LDFLAGS         ?= -T $(TYPE).ld -nostartfiles -Map $(NAME).map
 
@@ -54,7 +54,7 @@ PROGS           = $(NAME).out
 
 .c.o :
 	@echo "======== COMPILING $@ ========================"
-	@$(CC) $(CFLAGS) -c $<
+	@$(CC) $(CFLAGS) $<
 
 .s.o :
 	@echo "======== COMPILING $@ ========================"

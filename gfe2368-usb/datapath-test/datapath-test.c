@@ -491,14 +491,18 @@ static void stream_task() {
 int main(void)
 {
 
+    DBG(UART0,"\n***Start USB (bulk) datapath-test.***\n");
     FIO_ENABLE;
+
     pllstart_seventytwomhz() ;
+
     mam_enable();
+
     uart0_init_115200() ;
 
     init_color_led() ;
 
-    DBG(UART0,"Initialising USB stack\n");
+    DBG(UART0,"Initialising USB stack...\n");
 
     // initialise stack
     USBInit();

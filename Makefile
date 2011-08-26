@@ -1,6 +1,6 @@
 
 #
-# Makefile for libgfe2368 
+# Makefile for libgfe2368
 #
 
 NAME            := libgfe2368
@@ -71,11 +71,11 @@ ASFLAGS         = -ggdb -ahls -mfloat-abi=softfp $(INCLUDE)
 .SUFFIXES : .c .cpp .s
 
 .c.o :
-	@echo "======== COMPILING $@ ========================"
+	@echo "========== COMPILING $@ ========================"
 	@$(CC) $(CFLAGS) -o $(<:.c=.o) -c $<
 
 .s.o :
-	@echo "======== COMPILING $@ ========================"
+	@echo "========== COMPILING $@ ========================"
 	@$(AS) $(ASFLAGS) -o $@ $< > $*.lst
         
 
@@ -86,15 +86,15 @@ tests: $(TESTS)
 $(COBJS): $(HS)
 
 $(EXLIBS): 
-	@echo "========= Recursive make: $(@D)    ========================"
+	@echo "===== Recursive make: $(@D) ========================"
 	@$(MAKE) -s USB_PORT=$(USB_PORT) DEBUG=$(DEBUG) -s -C $(@D) $(@F)
 
 $(LIBS): $(AOBJS) $(COBJS) $(EXLIBS)
-	@echo "========= Making Library $@ ========================"
+	@echo "======= Making Library $@ ========================"
 	@$(AR) $(ARCHIVEFLAGS) $@ $(AOBJS) $(COBJS)
 
 $(TESTS): $(LIBS) $(ASRCS) $(CSRCS) $(TESTSRCS)
-	@echo "========= Recursive make: $(@D) ========================"
+	@echo "===== Recursive make: $(@D) ========================"
 	@$(MAKE) -s -C $(@D) $(@F)
 
 clean:

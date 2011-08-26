@@ -1,3 +1,31 @@
 
-Development tree for PSAS GFE boards with lpc2368 chip.
+
+Software development for PSAS GFE boards
+
+------------- makefile vars to note
+
+GFE_BOARD_NUM
+	Defines a variable to register the board serial
+	number for this build. See gfe2368-info tree.
+
+LPC23XX_PART
+	Defines a part for this build. Some parts require
+	special logic. Ex: wrong polarity on D- and D+.
+
+------------- Basic targets
+
+make clean will clean objects from subdirectories.
+
+make allclean will clean objects and all test directories.
+
+make tests will make example tests
+
+------------- SCM: git Submodules
+
+liblpc23xx is a git submodule
+
+Execute:
+git submodule init
+git submodule update
+   
 

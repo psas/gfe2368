@@ -170,8 +170,21 @@ void datapath_task(const char* portname, const char* logfile, int quiet) {
                 continue;
             } else {
                 printf("\nOptions: (s)-stop, (r)-reset, (g)-go, (f)-flush host buffer, (q)-quit\n");
-                printf("\nYou typed: %c\n", value_stdin);
-                write_serial = write(fd, &value_stdin, 1);
+                printf("\nYou typed: %c", value_stdin);
+                switch(value_stdin) {
+                    case 'r': 
+                        printf(" RESET\n");
+                        break;
+                    case 'g': 
+                        printf(" GO\n");
+                        break;
+                    case 's': 
+                        printf(" STOP\n");
+                        break;
+                    default: 
+                        break;
+                } 
+                printf("\n");
                 if(value_stdin == 'g') {
                     time(&begin);
                     bytecount = 0;
@@ -182,6 +195,7 @@ void datapath_task(const char* portname, const char* logfile, int quiet) {
                     printf("Average rate:\t%5.2f bytes/sec.\t%5.2f bits/sec.\n", avgrate, avgrate*8);
                 }
  
+                write_serial = write(fd, &value_stdin, 1);
                 if(write_serial != 1) {
                     fprintf(stderr, "Write serial %i\n", write_serial);
                 }
@@ -189,7 +203,7 @@ void datapath_task(const char* portname, const char* logfile, int quiet) {
         } else {}
 
         if(value_stdin == 'q') {
-            printf("You typed quit.\n");
+            printf("Quitting.\n");
             break;
         }
 

@@ -7,7 +7,7 @@ LD              = $(CC)
 
 INCLUDE         = -I./include
 
-DEBUG           += -g
+DEBUG           += -g -DVERBOSE
 
 CFLAGS          = $(INCLUDE) -c $(DEBUG) -Wall -O3
 

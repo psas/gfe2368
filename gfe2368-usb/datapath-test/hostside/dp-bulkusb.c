@@ -62,7 +62,16 @@ void dp_task() {
     	fprintf(stderr, "dp_task: Failed to find gfe device.");
     }
 
-
+    ret = libusb_claim_interface(devh, 0);
+    if (ret < 0) {
+    	fprintf(stderr, "dp_task: claim_interface error: %d\n", ret);
+    	clean_interface();
+    	exit(EXIT_FAILURE);
+    }
+    DBG("dp_task: claimed interface\n");
+//    ret = alloc_transfers();
+//    	if (r < 0)
+//    		goto out_deinit;
 }
 
 
@@ -70,14 +79,14 @@ void dp_task() {
 
 int main(int argc, char* argv[]) {
 
-    printf("**Starting %s\n", argv[0]);
+	printf("**Starting %s\n", argv[0]);
 
-        dp_task();
+	dp_task();
 
-    printf("\n** %s Done. **\n\n", argv[0]);
+	printf("\n** %s Done. **\n\n", argv[0]);
 
-    //clean_interface();
-    return(0);
+	clean_interface();
+	return(0);
 
 }
 

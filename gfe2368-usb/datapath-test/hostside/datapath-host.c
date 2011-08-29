@@ -120,7 +120,9 @@ void datapath_task(const char* portname, const char* logfile, int quiet) {
 
     int                 write_serial = 0; 
     int                 bytes_serial = 0; 
-    int                 value_serial = 0; 
+
+    uint                value_serial = 0; 
+    uint                sequence     = 1; 
 
     int                 bytes_stdin = 0; 
     int                 value_stdin = 0; 
@@ -174,6 +176,7 @@ void datapath_task(const char* portname, const char* logfile, int quiet) {
                 switch(value_stdin) {
                     case 'r': 
                         printf(" RESET\n");
+                        sequence = 1;
                         break;
                     case 'g': 
                         printf(" GO\n");
@@ -214,6 +217,10 @@ void datapath_task(const char* portname, const char* logfile, int quiet) {
         } else if (bytes_serial > 0) {
             //printf("\nReceived: %u bytes: 0x%x\n", bytes_serial, value_serial);
             bytecount += bytes_serial;
+            if(value_serial != sequence) {
+                fprintf(stderr, "Out of sequence: %x received, expected: %x\n", value_serial, sequence);
+            }
+            ++sequence;
             if(quiet == 0) {
                 printf("%x\n", value_serial);
                 fprintf(log, "%x %u\n", value_serial, value_serial);

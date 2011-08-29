@@ -345,7 +345,7 @@ int VCOM_putword(int c) {
     vic_disableFIQ();
 
     ret = fifo_putword(&txfifo,  c );
-    if(ret) {
+    if(!ret) {
     	DBG(UART0, "fifo_putword fail\n");
     }
 
@@ -425,7 +425,7 @@ static void stream_task() {
 	// do USB stuff in interrupt
 	while (1) {
 //		DBG(UART0, "State is: %u\n", (uint32_t) runstate_g.state);
-	        util_wait_msecs(50);
+//	        util_wait_msecs(20);
 		switch(runstate_g.state) {
 		case GO:
 			// get and print sample

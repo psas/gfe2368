@@ -15,11 +15,11 @@ LDFLAGS         = -lm
 
 ###### SOURCES  #################
 
-CSRCS		= datapath-host.c dp-bulkusb.c serial-port.c parse-args.c helpers.c
+CSRCS		= datapath-host.c serial-port.c parse-args.c helpers.c
 
 COBJS           = $(CSRCS:.c=.o)
 
-PROGS           = datapath-host dp-bulkusb
+PROGS           = datapath-host
 
 .PHONY: rebuild clean
 

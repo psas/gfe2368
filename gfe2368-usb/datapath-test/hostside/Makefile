@@ -5,7 +5,8 @@ CC		= gcc
 
 LD              = $(CC)
 
-INCLUDE         = -I./include
+INCLUDE         = -I./include\
+			      -I/usr/include/libusb-1.0
 
 DEBUG           += -g -DVERBOSE
 

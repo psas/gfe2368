@@ -316,6 +316,7 @@ static BOOL HandleClassRequest(TSetupPacket *pSetup, int *piLen, uint8_t **ppbDa
   */
 void VCOM_init(void)
 {
+
     fifo_init(&txfifo);
     fifo_init(&rxfifo);
     fBulkInBusy = FALSE;
@@ -338,19 +339,19 @@ int VCOM_putchar(int c)
  * Writes one word to VCOM port
  */
 int VCOM_putword(int c) {
-    int r = 0;
-    r = fifo_put(&txfifo,  c &  0xff              );
-    if(r) {
-        r = fifo_put(&txfifo, ((c & (0xff << 8)) >> 8));
-        if( r ) {
-            r = fifo_put(&txfifo, ((c & (0xff << 16))  >> 16 ));
-            if( r ) {
-                r = fifo_put(&txfifo, ((c & (0xff << 24))  >> 24));
-                if( r ) { } 
-                else DBG(UART0, "fifo_put fail\n"); 
-            } else DBG(UART0, "fifo_put fail\n"); 
-        } else  DBG(UART0, "fifo_put fail\n");
-    } else  DBG(UART0, "fifo_put fail\n");
+    int ret = 0;
+
+    vic_disableIRQ();
+    vic_disableFIQ();
+
+    ret = fifo_putword(&txfifo,  c );
+    if(ret) {
+    	DBG(UART0, "fifo_putword fail\n");
+    }
+
+    vic_enableIRQ();
+    vic_enableFIQ();
+
     return(0);
 }
 

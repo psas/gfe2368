@@ -5,13 +5,14 @@ CC		= gcc
 
 LD              = $(CC)
 
-INCLUDE         = -I./include
+INCLUDE         = -I./include\
+			      -I/usr/include/libusb-1.0
 
-DEBUG           += -g
+DEBUG           += -g -DVERBOSE
 
-CFLAGS          = $(INCLUDE) -c $(DEBUG) -Wall -Werror -O3
+CFLAGS          = $(INCLUDE) -c $(DEBUG) -Wall -O3
 
-LDFLAGS         = -lm
+LDFLAGS         = -lm -lusb-1.0
 
 ###### SOURCES  #################
 

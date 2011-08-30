@@ -230,6 +230,27 @@ void dp_task() {
         fprintf(stderr, "dp_task: Failed to find gfe device.");
     }
 
+    // check if kernel already has claimed device:
+    ret = libusb_kernel_driver_active(devh,0);
+    if(ret == 1) {
+        fprintf(stderr, "Kernel has device. Forcing kernel to release device.\n");
+        ret = libusb_detach_kernel_driver(devh, 0);
+        if(ret != 0) {
+            fprintf(stderr, "dp_task: detach_kernel_driver failure, return: %i", ret);
+            clean_interface();
+            exit(EXIT_FAILURE);
+        }
+    } else if (ret == LIBUSB_ERROR_NO_DEVICE) {
+        fprintf(stderr, "No device found\n");
+        clean_interface();
+        exit(EXIT_FAILURE);
+    } else if (ret != 0) {
+        fprintf(stderr, "dp_task: kernel_driver active returned: %i", ret);
+        clean_interface();
+        exit(EXIT_FAILURE);
+    } else {}
+
+
     ret = libusb_claim_interface(devh, 0);
     if (ret < 0) {
         fprintf(stderr, "dp_task: claim_interface error: %d\n", ret);
@@ -246,11 +267,15 @@ void dp_task() {
     }
 
     printf("\nOptions: (s)-stop, (r)-reset, (g)-go, (q)-quit\n");
+    ret = reset_stdin(&orig_stdin_tios);
+    if(ret < 0) {
+        fprintf(stderr, "dp_task: failed to reset stdin\n");
+    }
     while (!exit_test) {
         // get info from console (user)
         bytes_stdin = read(0, &value_stdin, 1);
-        if (bytes_stdin >= 0) {
-            printf("\nYou typed: %c", value_stdin);
+        if (bytes_stdin > 0) {
+            printf("\nYou typed: %c", (char) value_stdin);
             printf("\nOptions: (s)-stop, (r)-reset, (g)-go, (q)-quit\n");
             switch(value_stdin) {
                 case 'r':
@@ -276,35 +301,52 @@ void dp_task() {
                 printf("Average rate:\t%5.2f bytes/sec.\t%5.2f bits/sec.\n", avgrate, avgrate*8);
             }
 
-            ret = libusb_bulk_transfer(devh, EP_BULK_OUT, &value_stdin, 1, &bytes_out, 2000);
+            DBG("Sending data: 0x%x\t%c\n", value_stdin, (char) value_stdin);
+            ret = libusb_bulk_transfer(devh, EP_BULK_OUT, &value_stdin, 1, &bytes_out, 0);
 
             if(ret != 0) {
-                fprintf(stderr, "Write bulk failed with return: %i, bytes_out of %d\n", ret, bytes_out);
+                fprintf(stderr, "\n*** Write bulk failed with return: %i, bytes_out are %d\n", ret, bytes_out);
+                switch(ret) {
+                    case LIBUSB_ERROR_TIMEOUT: 
+                        fprintf(stderr, "\n*** ERROR_TIMEOUT ***\n");
+                        break;
+                    case LIBUSB_ERROR_PIPE: 
+                        fprintf(stderr, "\n*** ERROR_PIPE ***\n");
+                        break;
+                    case LIBUSB_ERROR_OVERFLOW: 
+                        fprintf(stderr, "\n*** ERROR_OVERFLOW ***\n");
+                        break;
+                    case LIBUSB_ERROR_NO_DEVICE: 
+                        fprintf(stderr, "\n*** ERROR_NO_DEVICE ***\n");
+                        break;
+                    default:
+                        fprintf(stderr, "\n*** other error %i ***\n", ret);
+                        break;
+                }
             }
-        }
 
-        if(value_stdin == 'q') {
-            printf("Quitting.\n");
-            exit_test=1;
-            DBG("Reset stdin.\n");
-            ret = reset_stdin(&orig_stdin_tios);
-            if(ret < 0) {
-                fprintf(stderr, "dp_task: failed to reset stdin\n");
+            if(value_stdin == 'q') {
+                printf("Quitting.\n");
+                exit_test=1;
+                DBG("Reset stdin.\n");
+                ret = reset_stdin(&orig_stdin_tios);
+                if(ret < 0) {
+                    fprintf(stderr, "dp_task: failed to reset stdin\n");
+                }
+                break;
             }
-            break;
-        }
 
+        }
+        DBG("handle events\n");
         ret = libusb_handle_events(NULL);
+        DBG("handle events out\n");
         if (ret < 0) {
             fprintf(stderr, "dp_task: handle_events error: %d\n", ret);
             clean_interface();
             exit(EXIT_FAILURE);
         }
     }
-
 }
-
-
 
 
 int main(int argc, char* argv[]) {

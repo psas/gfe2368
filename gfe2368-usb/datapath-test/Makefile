@@ -19,7 +19,7 @@ INCLUDE         := -I.\
                    -I$(LIBDIR)/gfe2368-info/include\
                    -I$(LIBDIR)/gfe2368-util/include
                    
-#DEBUG           := -DDEBUG_USB
+DEBUG           := -DDEBUG_USB
 GFE_BOARD_NUM   ?= -DBOARD_ONE
 include $(LIBDIR)/include/common-test-make.mk
 

@@ -422,6 +422,8 @@ static void stream_task() {
 
 	runstate_g.state = RESET;
 
+	VCOM_putword(0xfeed);
+
 	// do USB stuff in interrupt
 	while (1) {
 //		DBG(UART0, "State is: %u\n", (uint32_t) runstate_g.state);

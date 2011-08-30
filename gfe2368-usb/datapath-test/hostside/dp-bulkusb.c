@@ -45,7 +45,25 @@
 #include "parse-args.h"
 #include "dp-bulkusb.h"
 
-
+void print_libusberror(int libusberrno) {
+	switch(libusberrno) {
+	case LIBUSB_ERROR_TIMEOUT:
+		fprintf(stderr, "\n*** ERROR_TIMEOUT ***\n");
+		break;
+	case LIBUSB_ERROR_PIPE:
+		fprintf(stderr, "\n*** ERROR_PIPE ***\n");
+		break;
+	case LIBUSB_ERROR_OVERFLOW:
+		fprintf(stderr, "\n*** ERROR_OVERFLOW ***\n");
+		break;
+	case LIBUSB_ERROR_NO_DEVICE:
+		fprintf(stderr, "\n*** ERROR_NO_DEVICE ***\n");
+		break;
+	default:
+		//fprintf(stderr, "\n*** other error %i ***\n", libusberrno);
+		break;
+	}
+}
 /**
  * Do something with data read in from bulk
  */
@@ -196,6 +214,17 @@ int reset_stdin(struct termios* orig_stdin_tios) {
     return(0);
 }
 
+void print_word(uint8_t* v) {
+    uint32_t w;
+    w = *v;
+    w = w | (uint32_t) ((*++v & 0xff) << 8 );
+    w = w | (uint32_t) ((*++v & 0xff) << 16 );
+    w = w | (uint32_t) ((*++v & 0xff) << 24 );
+
+    printf("0x%x\n", w);
+}
+
+
 /**
  *  task to read and write bulk usb data while
  *  reading commands from stdin
@@ -204,14 +233,18 @@ void dp_task() {
     time_t                begin, end;
     double                totalsecs;
     double                avgrate;
+    uint32_t 				i =0;
 
     int32_t                     ret          = 1;
     int32_t             bytecount    = 0;
 
     int32_t             bytes_stdin  = 0;
-    int32_t                             bytes_out    = 0;
+    int32_t             bytes_out    = 0;
 
-    uint8_t             value_stdin  = 0;
+    uint8_t             value_stdin      = 0;
+
+    uint8_t              value_usb[64];
+
     struct termios      orig_stdin_tios;
 
     if(init_stdin(&orig_stdin_tios) != 0) {
@@ -266,6 +299,17 @@ void dp_task() {
         exit(EXIT_FAILURE);
     }
 
+//    printf("here\n");
+//       ret = libusb_submit_transfer(bulk_xfer_in);
+//       printf("here2\n");
+//       if (ret  < 0) {
+//           fprintf(stderr, "dp_task: submit initial transfer error\n");
+//           libusb_free_transfer(bulk_xfer_in);
+//           bulk_xfer_in = NULL;
+//           exit_test = 1;
+//           return;
+//       }
+
     printf("\nOptions: (s)-stop, (r)-reset, (g)-go, (q)-quit\n");
     ret = reset_stdin(&orig_stdin_tios);
     if(ret < 0) {
@@ -303,26 +347,11 @@ void dp_task() {
 
             DBG("Sending data: 0x%x\t%c\n", value_stdin, (char) value_stdin);
             ret = libusb_bulk_transfer(devh, EP_BULK_OUT, &value_stdin, 1, &bytes_out, 0);
+            print_libusberror(ret);
 
             if(ret != 0) {
                 fprintf(stderr, "\n*** Write bulk failed with return: %i, bytes_out are %d\n", ret, bytes_out);
-                switch(ret) {
-                    case LIBUSB_ERROR_TIMEOUT: 
-                        fprintf(stderr, "\n*** ERROR_TIMEOUT ***\n");
-                        break;
-                    case LIBUSB_ERROR_PIPE: 
-                        fprintf(stderr, "\n*** ERROR_PIPE ***\n");
-                        break;
-                    case LIBUSB_ERROR_OVERFLOW: 
-                        fprintf(stderr, "\n*** ERROR_OVERFLOW ***\n");
-                        break;
-                    case LIBUSB_ERROR_NO_DEVICE: 
-                        fprintf(stderr, "\n*** ERROR_NO_DEVICE ***\n");
-                        break;
-                    default:
-                        fprintf(stderr, "\n*** other error %i ***\n", ret);
-                        break;
-                }
+
             }
 
             if(value_stdin == 'q') {
@@ -337,14 +366,23 @@ void dp_task() {
             }
 
         }
-        DBG("handle events\n");
-        ret = libusb_handle_events(NULL);
-        DBG("handle events out\n");
-        if (ret < 0) {
-            fprintf(stderr, "dp_task: handle_events error: %d\n", ret);
-            clean_interface();
-            exit(EXIT_FAILURE);
+
+        ret = libusb_bulk_transfer(devh, EP_BULK_IN, value_usb, 64, &bytes_out, 100);
+
+        bytecount += bytes_out;
+        // if(ret!=0) print_libusberror(ret);
+
+        for(i=0; i<bytes_out; i=i+4) {
+                print_word(&value_usb[i]);
         }
+//        DBG("handle events\n");
+//        ret = libusb_handle_events(NULL);
+//        DBG("handle events out\n");
+//        if (ret < 0) {
+//            fprintf(stderr, "dp_task: handle_events error: %d\n", ret);
+//            clean_interface();
+//            exit(EXIT_FAILURE);
+//        }
     }
 }
 

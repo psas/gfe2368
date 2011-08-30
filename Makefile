@@ -104,7 +104,7 @@ clean:
 	@$(MAKE) -s -C gfe2368-usb/datapath-test clean
 
 allclean: clean
-	@$(MAKE) -s -C liblpc23xx clean
+	$(MAKE) -s -C liblpc23xx clean
 	
 rebuild: allclean
 	@$(MAKE)

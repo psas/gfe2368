@@ -46,23 +46,32 @@
 #include "dp-bulkusb.h"
 
 void print_libusberror(int libusberrno) {
-	switch(libusberrno) {
-	case LIBUSB_ERROR_TIMEOUT:
-		fprintf(stderr, "\n*** ERROR_TIMEOUT ***\n");
-		break;
-	case LIBUSB_ERROR_PIPE:
-		fprintf(stderr, "\n*** ERROR_PIPE ***\n");
-		break;
-	case LIBUSB_ERROR_OVERFLOW:
-		fprintf(stderr, "\n*** ERROR_OVERFLOW ***\n");
-		break;
-	case LIBUSB_ERROR_NO_DEVICE:
-		fprintf(stderr, "\n*** ERROR_NO_DEVICE ***\n");
-		break;
-	default:
-		//fprintf(stderr, "\n*** other error %i ***\n", libusberrno);
-		break;
-	}
+    switch(libusberrno) {
+        case LIBUSB_ERROR_TIMEOUT:
+            fprintf(stderr, "\n*** ERROR_TIMEOUT ***\n");
+            break;
+        case LIBUSB_ERROR_PIPE:
+            fprintf(stderr, "\n*** ERROR_PIPE ***\n");
+            break;
+        case LIBUSB_ERROR_OVERFLOW:
+            fprintf(stderr, "\n*** ERROR_OVERFLOW ***\n");
+            break;
+        case LIBUSB_ERROR_NO_DEVICE:
+            fprintf(stderr, "\n*** ERROR_NO_DEVICE ***\n");
+            break;
+        case LIBUSB_ERROR_NOT_FOUND:
+            fprintf(stderr, "\n*** ERROR_NOT_FOUND ***\n");
+            break;
+        case LIBUSB_ERROR_INVALID_PARAM:
+            fprintf(stderr, "\n*** ERROR_INVALID_PARAM ***\n");
+            break;
+         case LIBUSB_ERROR_BUSY:
+           fprintf(stderr, "\n*** ERROR_BUSY ***\n");
+           break;
+        default:
+            //fprintf(stderr, "\n*** other error %i ***\n", libusberrno);
+            break;
+    }
 }
 /**
  * Do something with data read in from bulk
@@ -157,7 +166,17 @@ static int init_bulk_xfer_in(struct libusb_transfer* bulk_xfer_in) {
  * clean up the interface before exit
  */
 void clean_interface() {
+    uint32_t ret = 0;
     libusb_release_interface(devh, 0);
+    // @todo attach_kernel_driver failing for ACM device
+    if(kernel_giveback==1) {
+        DBG("Return kernel control.\n");
+        ret = libusb_attach_kernel_driver(devh, 0);
+        if(ret != 0) {
+            fprintf(stderr, "clean_interface: kernel driver attach failed. %i\n", ret );
+            print_libusberror(ret);        
+        }
+    }
     libusb_close(devh);
     libusb_exit(NULL);
 }
@@ -221,6 +240,12 @@ void print_word(uint8_t* v) {
     w = w | (uint32_t) ((*++v & 0xff) << 16 );
     w = w | (uint32_t) ((*++v & 0xff) << 24 );
 
+    if(w!= sequence) {
+        fprintf(stderr, "Sequence error received: %i, sequence: %i\n",w, sequence);
+        sequence_errors++;
+    }
+    sequence++;
+
     printf("0x%x\n", w);
 }
 
@@ -230,16 +255,17 @@ void print_word(uint8_t* v) {
  *  reading commands from stdin
  */
 void dp_task() {
-    time_t                begin, end;
-    double                totalsecs;
-    double                avgrate;
-    uint32_t 				i =0;
+    time_t              begin, end;
+    double              totalsecs;
+    double              avgrate;
 
-    int32_t                     ret          = 1;
-    int32_t             bytecount    = 0;
+    uint32_t            i                = 0;
 
-    int32_t             bytes_stdin  = 0;
-    int32_t             bytes_out    = 0;
+    int32_t             ret              = 1;
+    int32_t             bytecount        = 0;
+
+    int32_t             bytes_stdin      = 0;
+    int32_t             bytes_out        = 0;
 
     uint8_t             value_stdin      = 0;
 
@@ -260,13 +286,15 @@ void dp_task() {
 
     ret = find_gfe_device(IDVENDOR, IDPRODUCT);
     if(ret < 0) {
-        fprintf(stderr, "dp_task: Failed to find gfe device.");
+        fprintf(stderr, "dp_task: Failed to find gfe device.\n");
+        exit(EXIT_FAILURE);
     }
 
     // check if kernel already has claimed device:
     ret = libusb_kernel_driver_active(devh,0);
     if(ret == 1) {
         fprintf(stderr, "Kernel has device. Forcing kernel to release device.\n");
+        kernel_giveback = 1;
         ret = libusb_detach_kernel_driver(devh, 0);
         if(ret != 0) {
             fprintf(stderr, "dp_task: detach_kernel_driver failure, return: %i", ret);
@@ -299,19 +327,19 @@ void dp_task() {
         exit(EXIT_FAILURE);
     }
 
-//    printf("here\n");
-//       ret = libusb_submit_transfer(bulk_xfer_in);
-//       printf("here2\n");
-//       if (ret  < 0) {
-//           fprintf(stderr, "dp_task: submit initial transfer error\n");
-//           libusb_free_transfer(bulk_xfer_in);
-//           bulk_xfer_in = NULL;
-//           exit_test = 1;
-//           return;
-//       }
+    //    printf("here\n");
+    //       ret = libusb_submit_transfer(bulk_xfer_in);
+    //       printf("here2\n");
+    //       if (ret  < 0) {
+    //           fprintf(stderr, "dp_task: submit initial transfer error\n");
+    //           libusb_free_transfer(bulk_xfer_in);
+    //           bulk_xfer_in = NULL;
+    //           exit_test = 1;
+    //           return;
+    //       }
 
     printf("\nOptions: (s)-stop, (r)-reset, (g)-go, (q)-quit\n");
-//    ret = reset_stdin(&orig_stdin_tios);
+    //    ret = reset_stdin(&orig_stdin_tios);
     if(ret < 0) {
         fprintf(stderr, "dp_task: failed to reset stdin\n");
     }
@@ -323,6 +351,7 @@ void dp_task() {
             printf("\nOptions: (s)-stop, (r)-reset, (g)-go, (q)-quit\n");
             switch(value_stdin) {
                 case 'r':
+                    sequence = 1;
                     printf("\tRESET\n");
                     break;
                 case 'g':
@@ -356,13 +385,14 @@ void dp_task() {
 
             if(value_stdin == 'q') {
                 printf("Quitting.\n");
+                fprintf(stderr,"Sequence errors: %i\n", sequence_errors);
                 exit_test=1;
                 DBG("Reset stdin.\n");
                 ret = reset_stdin(&orig_stdin_tios);
                 if(ret < 0) {
                     fprintf(stderr, "dp_task: failed to reset stdin\n");
                 }
-                break;
+               break;
             }
 
         }
@@ -373,16 +403,8 @@ void dp_task() {
         // if(ret!=0) print_libusberror(ret);
 
         for(i=0; i<bytes_out; i=i+4) {
-                print_word(&value_usb[i]);
-        }
-//        DBG("handle events\n");
-//        ret = libusb_handle_events(NULL);
-//        DBG("handle events out\n");
-//        if (ret < 0) {
-//            fprintf(stderr, "dp_task: handle_events error: %d\n", ret);
-//            clean_interface();
-//            exit(EXIT_FAILURE);
-//        }
+            print_word(&value_usb[i]);
+       }
     }
 }
 

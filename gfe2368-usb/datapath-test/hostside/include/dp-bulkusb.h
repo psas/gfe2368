@@ -14,14 +14,14 @@
 #else
     #define DBG(x ...)
 #endif
-#define 	MAX_BULK_XFERSIZE			64
+#define         MAX_BULK_XFERSIZE                       64
 
 // PSAS devices - not official
-#define 	IDVENDOR	                ((uint16_t) 0xffff)
-#define		IDPRODUCT	                ((uint16_t) 0x0005)
+#define         IDVENDOR                        ((uint16_t) 0xffff)
+#define         IDPRODUCT                       ((uint16_t) 0x0005)
 
-#define	    EP_BULK_IN	                ((uint8_t ) (2 | LIBUSB_ENDPOINT_IN))
-#define	    EP_BULK_OUT	                ((uint8_t ) (5 | LIBUSB_ENDPOINT_OUT))
+#define     EP_BULK_IN                  ((uint8_t ) (2 | LIBUSB_ENDPOINT_IN))
+#define     EP_BULK_OUT                 ((uint8_t ) (5 | LIBUSB_ENDPOINT_OUT))
 
 // termios values
 #define     VMIN_VALUE                  0
@@ -36,9 +36,12 @@ static struct   libusb_transfer*        bulk_xfer_in  = NULL;
 static          uint8_t                 bulk_buf_in[MAX_BULK_XFERSIZE];
 //static          uint8_t                 bulk_buf_out[MAX_BULK_XFERSIZE];
 
-static 			int32_t	                exit_test     = 0;
+static          int32_t          exit_test        = 0;
+static          uint32_t         kernel_giveback  = 0;
+static          uint32_t         sequence         = 1;
+static          uint32_t         sequence_errors  = 0;
 
-static struct   libusb_device_handle*   devh          = NULL;
+static struct   libusb_device_handle*   devh      = NULL;
 
 
 #endif

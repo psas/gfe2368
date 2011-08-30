@@ -311,7 +311,7 @@ void dp_task() {
 //       }
 
     printf("\nOptions: (s)-stop, (r)-reset, (g)-go, (q)-quit\n");
-    ret = reset_stdin(&orig_stdin_tios);
+//    ret = reset_stdin(&orig_stdin_tios);
     if(ret < 0) {
         fprintf(stderr, "dp_task: failed to reset stdin\n");
     }
@@ -346,7 +346,7 @@ void dp_task() {
             }
 
             DBG("Sending data: 0x%x\t%c\n", value_stdin, (char) value_stdin);
-            ret = libusb_bulk_transfer(devh, EP_BULK_OUT, &value_stdin, 1, &bytes_out, 0);
+            ret = libusb_bulk_transfer(devh, EP_BULK_OUT, &value_stdin, 1, &bytes_out, 100);
             print_libusberror(ret);
 
             if(ret != 0) {

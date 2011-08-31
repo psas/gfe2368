@@ -20,6 +20,8 @@
 #define         IDVENDOR                        ((uint16_t) 0xffff)
 #define         IDPRODUCT                       ((uint16_t) 0x0005)
 
+#define IFACE_BULK 1
+
 #define     EP_BULK_IN                  ((uint8_t ) (2 | LIBUSB_ENDPOINT_IN))
 #define     EP_BULK_OUT                 ((uint8_t ) (5 | LIBUSB_ENDPOINT_OUT))
 

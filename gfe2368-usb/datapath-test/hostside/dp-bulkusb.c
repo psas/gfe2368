@@ -291,11 +291,11 @@ void dp_task() {
     }
 
     // check if kernel already has claimed device:
-    ret = libusb_kernel_driver_active(devh,0);
+    ret = libusb_kernel_driver_active(devh, IFACE_BULK);
     if(ret == 1) {
         fprintf(stderr, "Kernel has device. Forcing kernel to release device.\n");
         kernel_giveback = 1;
-        ret = libusb_detach_kernel_driver(devh, 0);
+        ret = libusb_detach_kernel_driver(devh, IFACE_BULK);
         if(ret != 0) {
             fprintf(stderr, "dp_task: detach_kernel_driver failure, return: %i", ret);
             clean_interface();
@@ -312,7 +312,7 @@ void dp_task() {
     } else {}
 
 
-    ret = libusb_claim_interface(devh, 0);
+    ret = libusb_claim_interface(devh, IFACE_BULK);
     if (ret < 0) {
         fprintf(stderr, "dp_task: claim_interface error: %d\n", ret);
         clean_interface();

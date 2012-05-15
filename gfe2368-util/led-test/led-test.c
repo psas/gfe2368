@@ -106,6 +106,17 @@ int main (void) {
 
     uart0_putstring("\n\n***Done***\n\n");
 
+    while(1) {
+        printf_lpc(UART0,"2 SLOW flashes...red, blue then green\n"); 
+        color_led_flash(2, RED_LED, FLASH_SLOW ) ;
+        RED_LED_OFF;
+        color_led_flash(2, BLUE_LED,  FLASH_SLOW ) ;
+        BLUE_LED_OFF;
+        color_led_flash(2, GREEN_LED, FLASH_SLOW ) ;
+        GREEN_LED_OFF;
+    }
+
+
     return(0);
 
 }

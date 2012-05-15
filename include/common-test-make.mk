@@ -46,7 +46,7 @@ COBJS           = $(CSRCS:.c=.o)
 
 AOBJS           = $(ASRCS:.s=.o)
 
-EXLIBS          = $(LPCLIBDIR)/liblpc23xx.a $(LIBDIR)/libgfe2368.a
+EXLIBS          =  $(LIBDIR)/libgfe2368.a $(LPCLIBDIR)/liblpc23xx.a
 
 PROGS           = $(NAME).out
 

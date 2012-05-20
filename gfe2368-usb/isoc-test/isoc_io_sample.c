@@ -17,6 +17,7 @@
 #include "lpc23xx-uart.h"
 #include "lpc23xx-util.h"
 #include "lpc23xx-vic.h"
+#include "lpc23xx-usb.h"
 
 #include "gfe2368-info.h"
 
@@ -32,10 +33,10 @@
  *  @param [out] piLen
  *  @param [out] ppbData
  */
-//static BOOL HandleClassRequest(TSetupPacket *pSetup, int *piLen, uint8_t **ppbData)
-//{
-//	return TRUE;
-//}
+static BOOL HandleClassRequest(TSetupPacket *pSetup, int *piLen, uint8_t **ppbData)
+{
+	return TRUE;
+}
 
 
 /**
@@ -43,11 +44,11 @@
 
   Simply calls the USB ISR, then signals end of interrupt to VIC
   */
-//static void USBIntHandler(void)
-//{
-//    USBHwISR();
-//    VICAddress = 0x00;    // dummy write to VIC to signal end of ISR
-//}
+static void USBIntHandler(void)
+{
+    USBHwISR();
+    VICAddress = 0x00;    // dummy write to VIC to signal end of ISR
+}
 
 /**
 	USB frame interrupt handler
@@ -61,74 +62,69 @@
 
  */
 
-//int delay = 0;
-//void USBFrameHandler(U16 wFrame)
-//{
-//    // send over USB
-//	if( isConnectedFlag ) {
-//		if( delay < 4000 ) {
-//			//FIXME need to delay a few seconds before doing isoc writes, impliment more elegant solution, status or event driven....
-//			delay++;
-//		} else {
-//
-//			//Always write whatever is in our most recent isoc output data buffer, you may want to pust somthing interesting in there....
-//			inputIsocDataBuffer[0]++;
-//			USBHwEPWrite(ISOC_IN_EP, inputIsocDataBuffer, BYTES_PER_ISOC_FRAME);
-//
-//			int iLen = USBHwISOCEPRead(ISOC_OUT_EP, outputIsocDataBuffer, sizeof(outputIsocDataBuffer));
-//			if (iLen > 0) {
-//				//Insert your code to do somthing interesting here....
-//				//DBG("z%d", b1);
-//
-//				//The host sample code will send a byte indicating if the sample LED on olimex 2148 dev board should be on of off.
-//				if( outputIsocDataBuffer[0] ) {
-//#ifdef LPC214x
-//					IOSET0 = (1<<10);//turn on led on olimex dev board
-//#else
-//					FIO1SET = (1<<19);//turn off led on olimex 2378 Sdev board
-//#endif
-//
-//				} else {
-//#ifdef LPC214x
-//					IOCLR0 = (1<<10);//turn off led on olimex dev board
-//#else
-//					FIO1CLR = (1<<19);//turn off led on olimex 2378 Sdev board
-//#endif
-//
-//				}
-//
-//			}
-//		}
-//	}
-//}
+int delay = 0;
 
+void USBFrameHandler(uint16_t wFrame)
+{
+
+    // send over USB
+	if( isConnectedFlag ) {
+
+		if( delay < 4000 ) {
+			//FIXME need to delay a few seconds before doing isoc writes, impliment more elegant solution, status or event driven....
+			delay++;
+		} else {
+
+			//Always write whatever is in our most recent isoc output data buffer, you may want to pust somthing interesting in there....
+			inputIsocDataBuffer[0]++;
+
+			USBHwEPWrite(ISOC_IN_EP, inputIsocDataBuffer, BYTES_PER_ISOC_FRAME);
+
+			int iLen = USBHwISOCEPRead(ISOC_OUT_EP, outputIsocDataBuffer, sizeof(outputIsocDataBuffer));
+			if (iLen > 0) {
+				//Insert your code to do somthing interesting here....
+				//DBG("z%d", b1);
+
+				//The host sample code will send a byte indicating if the BLUE LED should be on of off.
+				if( outputIsocDataBuffer[0] ) {
+					// BLUE_LED_ON
+				} else {
+					BLUE_LED_OFF;
+				}
+
+			}
+		}
+	} else {
+		RED_LED_ON;
+	}
+}
 
 /**
 	USB device status handler
 	
 	Resets state machine when a USB reset is received.
  */
-//static void USBDevIntHandler(U8 bDevStatus)
-//{
-//	if ((bDevStatus & DEV_STATUS_RESET) != 0) {
-//	}
-//
-//	bDevStat = bDevStatus;
-//
-//	//FIXME not sure if this is the right way to detect being connected???
-//	switch(bDevStatus ) {
-//	case DEV_STATUS_CONNECT:
-//		isConnectedFlag= 1;
-//		break;
-//	case DEV_STATUS_RESET:
-//	case DEV_STATUS_SUSPEND:
-//		isConnectedFlag= 0;
-//		break;
-//	}
-//}
-//
-//
+static void USBDevIntHandler(uint8_t bDevStatus)
+{
 
+	printf_lpc(UART0, "bDevStatus: %d\n", bDevStatus);
+	if ((bDevStatus & DEV_STATUS_RESET) != 0) {
+	}
+
+	bDevStat = bDevStatus;
+
+	//FIXME not sure if this is the right way to detect being connected???
+	switch(bDevStatus ) {
+	case DEV_STATUS_CONNECT:
+		isConnectedFlag= 1;
+		break;
+	case DEV_STATUS_RESET:
+	case DEV_STATUS_SUSPEND:
+		BLUE_LED_ON;
+		isConnectedFlag= 0;
+		break;
+	}
+}
 
 /*************************************************************************
 	main
@@ -136,7 +132,13 @@
 **************************************************************************/
 int main(void)
 {
+	int x = 0;
+
+	const int interval = 200000;
+
 	FIO_ENABLE;
+
+	vic_disableIRQ();
 
 	pllstart_seventytwomhz() ;
 	// pllstart_sixtymhz() ;
@@ -161,55 +163,75 @@ int main(void)
 	BLUE_LED_OFF;
 	GREEN_LED_OFF;
 
-//
-//	DBG("Initialising USB stack\n");
-//
-//	// initialise stack
-//	USBInit();
-//
-//	// register descriptors
-//	USBRegisterDescriptors(abDescriptors);
-//
-//	// register class request handler
-//	USBRegisterRequestHandler(REQTYPE_TYPE_CLASS, HandleClassRequest, abClassReqData);
-//
-//	// register endpoint handlers
-//	USBHwRegisterEPIntHandler(INT_IN_EP, NULL);
-//
-//	// register frame handler
-//	USBHwRegisterFrameHandler(USBFrameHandler);
-//
-//	// register device event handler
-//	USBHwRegisterDevIntHandler(USBDevIntHandler);
-//
-//	inputIsocDataBuffer[0] = 0;
-//
-//	DBG("Starting USB communication\n");
-//
-//	VICVectCntl22 = 0x01;
-//	VICVectAddr22 = (int)USBIntHandler;
-//
-//	// set up USB interrupt
-//	VICIntSelect &= ~(1<<22);               // select IRQ for USB
-//	VICIntEnable |= (1<<22);
-//
-//	enableIRQ();
+	printf_lpc(UART0,"5 FAST flashes...red, blue then green\n");
+	color_led_flash(5, RED_LED, FLASH_FAST ) ;
+	RED_LED_OFF;
+	color_led_flash(5, BLUE_LED,  FLASH_FAST ) ;
+	BLUE_LED_OFF;
+	color_led_flash(5, GREEN_LED, FLASH_FAST ) ;
+	GREEN_LED_OFF;
+	uart0_putstring(" ** END OF TEST ""\n");
+
+	printf_lpc(UART0, "Initialising USB stack\n");
+
+	// initialize stack
+	USBInit();
+
+	// register descriptors
+	USBRegisterDescriptors(abDescriptors);
+
+	// register class request handler
+	USBRegisterRequestHandler(REQTYPE_TYPE_CLASS, HandleClassRequest, abClassReqData);
+
+	// register endpoint handlers
+	USBHwRegisterEPIntHandler(INT_IN_EP, NULL);
+
+	// register frame handler
+	USBHwRegisterFrameHandler(USBFrameHandler);
+
+	// register device event handler
+	USBHwRegisterDevIntHandler(USBDevIntHandler);
+
+	inputIsocDataBuffer[0] = 0;
+
+	printf_lpc(UART0, "Starting USB communication\n");
+
+	VICVectPriority22  = 0x01;         // 0x0 is highest priority, 0xF is lowest
+	VICVectAddr22      = (unsigned int)USBIntHandler;
+	VICAddress         = 0x0;
+
+	printf_lpc(UART0, "addresses entered\n");
+
+	ENABLE_USB_IRQ;
+
+	printf_lpc(UART0, "USB IRQ Enabled\n");
+
+	vic_enableIRQ();
+
+	printf_lpc(UART0, "vic_enable\n");
+
+	ENABLE_USB_INT;
+
+ 	printf_lpc(UART0, "USB INT Enabled\n");
+
+
+
+	//printf_lpc(UART0, "connect to bus\n");
 //
 //	// connect to bus
-//	USBHwConnect(TRUE);
+	USBHwConnect(TRUE);
 //
-//	int x = 0;
-//
-//	const int interval = 200000;
-//
-//	for(;;) {
-//		x++;
-//
-//		if (x == interval) {
-//		} else if (x >= (interval*2)) {
-//			x = 0;
-//		}
-//	}
+
+	for(;;) {
+		x++;
+
+		if (x == interval) {
+			RED_LED_ON;
+		} else if (x >= (interval*2)) {
+			x = 0;
+			RED_LED_OFF;
+		}
+	}
 
 	return 0;
 }

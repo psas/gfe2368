@@ -21,19 +21,20 @@
 
 #define ISOC_OUTPUT_DATA_BUFFER_SIZE    1024
 
-__attribute__ ((aligned(4))) uint32_t inputIsocDataBuffer[(BYTES_PER_ISOC_FRAME/4)];
+__attribute__ ((aligned(4))) uint8_t      inputIsocDataBuffer[(BYTES_PER_ISOC_FRAME/4)];
 
-volatile                     uint8_t  outputIsocDataBuffer[ISOC_OUTPUT_DATA_BUFFER_SIZE];
+/* volatile */ uint8_t                          outputIsocDataBuffer[ISOC_OUTPUT_DATA_BUFFER_SIZE];
 
-//int isConnectedFlag = 0;
-//
-//uint8_t bDevStat         = 0;
+static void                               USBIntHandler(void) __attribute__ ((interrupt(IRQ)));
 
-// static uint8_t abClassReqData[8];
 
-// static void USBIntHandler(void) __attribute__ ((interrupt(IRQ), naked));
+int                          isConnectedFlag             = 0;
 
-static const uint8_t abDescriptors[] = {
+uint8_t                      bDevStat                    = 0;
+
+static uint8_t               abClassReqData[8];
+
+static const uint8_t         abDescriptors[] = {
 
     // device descriptor
     0x12,

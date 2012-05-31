@@ -8,30 +8,21 @@
 #ifndef IMU_H_
 #define IMU_H_
 
+#include "lpc23xx-types.h"
+
 void IMU_isr() __attribute__ ((interrupt("IRQ")));
 
-#define VIC_GPIO_BIT        17
+#define VIC_GPIO_BIT        (17)
 #define ENABLE_GPIO_INT     (VICIntEnable |= (1<<VIC_GPIO_BIT))
 #define DISABLE_GPIO_INT    (VICIntEnClr   = (1<<VIC_GPIO_BIT))
 #define RAISE_GPIO_INT      (VICSoftInt   |= (1<<VIC_GPIO_BIT))
 #define CLR_SW_GPIO_INT     (VICSoftIntClr = (1<<VIC_GPIO_BIT))
 
-#define VIC_EINT1_BIT        15
-#define ENABLE_EINT1_INT     (VICIntEnable |= (1<<VIC_EINT1_BIT))
-#define DISABLE_EINT1_INT    (VICIntEnClr   = (1<<VIC_EINT1_BIT))
-#define RAISE_EINT1_INT      (VICSoftInt   |= (1<<VIC_EINT1_BIT))
-#define CLR_SW_EINIT1_INT    (VICSoftIntClr = (1<<VIC_EINT1_BIT))
-
-#define VIC_SWINT_BIT        1
-#define ENABLE_SWINT_INT     (VICIntEnable |= (1<<VIC_SWINT_BIT))
-#define RAISE_SWINT_INT		 (VICSoftInt   |= (1<<VIC_SWINT_BIT))
-#define CLR_SW_SWINT_INT     (VICSoftIntClr = (1<<VIC_SWINT_BIT))
-
 typedef struct axis_data{
-	int x;
-	int y;
-	int z;
-	int modified;
+	int16_t x;
+	int16_t y;
+	int16_t z;
+	BOOL modified;
 } axis_data;
 /*GPIO 0 wiring*/
 //P0.00 CAN

@@ -26,12 +26,12 @@
 #include "LSM303DLH.h"
 
 
-axis_data 				xyz_data;
-axis_data				gyro_data;
-axis_data				mag_data;
-uint8_t					temp_data;
+static axis_data 				accel_data;
+static axis_data				gyro_data;
+static axis_data				mag_data;
+static uint8_t					temp_data;
 
-void poll_wait(i2c_iface i2c_ch) {
+static void poll_wait(i2c_iface i2c_ch) {
 	switch(i2c_ch){
     case I2C0:
     	while(is_binsem_locked(&i2c0_binsem_g)== 1);
@@ -47,42 +47,76 @@ void poll_wait(i2c_iface i2c_ch) {
 
 void L3G4200D_get_data_callback(i2c_master_xact_t* caller, i2c_master_xact_t* i2c_s){
 	//axis data has been read, move it to axis data struct
-	temp_data = (uint8_t)i2c_s->i2c_rd_buffer[0];
-	gyro_data.x = ((int8_t)i2c_s->i2c_rd_buffer[3] << 8) + (int8_t)i2c_s->i2c_rd_buffer[2];
-	gyro_data.y = ((int8_t)i2c_s->i2c_rd_buffer[5] << 8) + (int8_t)i2c_s->i2c_rd_buffer[4];
-	gyro_data.z = ((int8_t)i2c_s->i2c_rd_buffer[7] << 8) + (int8_t)i2c_s->i2c_rd_buffer[6];
-	gyro_data.modified = 1;
+//	uart0_putstring("\n***CALLBACK***\n");
 	if(!(i2c_s->xact_success)){
 		uart0_putstring("\n***L3G4200D GET DATA FAILED***\n");
+		return;
 	}
+	if(!L3G4200D_data_available(i2c_s->i2c_rd_buffer[1])){
+		uart0_putstring("\n***L3G4200D retrieved old data***\n");
+		//todo: Determine old axis?
+		return;
+	}
+	temp_data = i2c_s->i2c_rd_buffer[0];
+	gyro_data.x = (int16_t)((uint16_t)i2c_s->i2c_rd_buffer[3] << 8) + (uint16_t)i2c_s->i2c_rd_buffer[2];
+	gyro_data.y = (int16_t)((uint16_t)i2c_s->i2c_rd_buffer[5] << 8) + (uint16_t)i2c_s->i2c_rd_buffer[4];
+	gyro_data.z = (int16_t)((uint16_t)i2c_s->i2c_rd_buffer[7] << 8) + (uint16_t)i2c_s->i2c_rd_buffer[6];
+
+	if(L3G4200D_data_overrun(i2c_s->i2c_rd_buffer[1])){
+		uart0_putstring("\n***L3G4200D data overrun***\n");
+		//todo: Determine old axis?
+	}
+	if(gyro_data.modified == TRUE){
+		uart0_putstring("\n***L3G4200D data not printed since last acquisition***\n");
+	}
+	gyro_data.modified = TRUE;
 }
 
 void LIS331HH_get_data_callback(i2c_master_xact_t* caller, i2c_master_xact_t* i2c_s){
-	//axis data has been read, move it to axis data struct
-	xyz_data.x = ((int8_t)i2c_s->i2c_rd_buffer[1] << 8) + (int8_t)i2c_s->i2c_rd_buffer[0];
-	xyz_data.y = ((int8_t)i2c_s->i2c_rd_buffer[3] << 8) + (int8_t)i2c_s->i2c_rd_buffer[2];
-	xyz_data.z = ((int8_t)i2c_s->i2c_rd_buffer[5] << 8) + (int8_t)i2c_s->i2c_rd_buffer[4];
-	xyz_data.modified = 1;
 	if(!(i2c_s->xact_success)){
 		uart0_putstring("\n***LIS331HH GET DATA FAILED***\n");
+		return;
 	}
+	if(!LIS331HH_data_available(i2c_s->i2c_rd_buffer[0])){
+		uart0_putstring("\n***LIS331HH retrieved old data***\n");
+		return;
+	}
+	accel_data.x = (int16_t)((uint16_t)i2c_s->i2c_rd_buffer[2] << 8) + (uint16_t)i2c_s->i2c_rd_buffer[1];
+	accel_data.y = (int16_t)((uint16_t)i2c_s->i2c_rd_buffer[4] << 8) + (uint16_t)i2c_s->i2c_rd_buffer[3];
+	accel_data.z = (int16_t)((uint16_t)i2c_s->i2c_rd_buffer[6] << 8) + (uint16_t)i2c_s->i2c_rd_buffer[5];
+
+	if(LIS331HH_data_overrun(i2c_s->i2c_rd_buffer[0])){
+		uart0_putstring("\n***LIS331HH data overrun***\n");
+	}
+	if(accel_data.modified == TRUE){
+		uart0_putstring("\n***LIS331HH data not printed since last acquisition***\n");
+	}
+	accel_data.modified = TRUE;
 }
 
 void LSM303DLH_m_get_data_callback(i2c_master_xact_t* caller, i2c_master_xact_t* i2c_s){
-	mag_data.x = ((int8_t)i2c_s->i2c_rd_buffer[0] << 8) + (int8_t)i2c_s->i2c_rd_buffer[1];
-	mag_data.y = ((int8_t)i2c_s->i2c_rd_buffer[2] << 8) + (int8_t)i2c_s->i2c_rd_buffer[3];
-	mag_data.z = ((int8_t)i2c_s->i2c_rd_buffer[4] << 8) + (int8_t)i2c_s->i2c_rd_buffer[5];
-	mag_data.modified = 1;
-
 	if(!(i2c_s->xact_success)){
-		uart0_putstring("\n***LSM303DLH GET DATA FAILED***\n");
+		uart0_putstring("\n***LSM303DLH_M GET DATA FAILED***\n");
 	}
+	mag_data.x = (int16_t)((uint16_t)i2c_s->i2c_rd_buffer[0] << 8) + (uint16_t)i2c_s->i2c_rd_buffer[1];
+	mag_data.y = (int16_t)((uint16_t)i2c_s->i2c_rd_buffer[2] << 8) + (uint16_t)i2c_s->i2c_rd_buffer[3];
+	mag_data.z = (int16_t)((uint16_t)i2c_s->i2c_rd_buffer[4] << 8) + (uint16_t)i2c_s->i2c_rd_buffer[5];
+	if(mag_data.modified == TRUE){
+		uart0_putstring("\n***LSM303DLH_M data not printed since last acquisition***\n");
+	}
+	mag_data.modified = TRUE;
+}
+
+static void empty_callback(i2c_master_xact_t* caller, i2c_master_xact_t* i2c_s) {
+	if(!(i2c_s->xact_success)){
+		uart0_putstring("\n***L3G4200D I2C call failed***\n");
+	}
+	return;
 }
 
 void IMU_isr(){
 	DISABLE_GPIO_INT;
-	//CLR_SW_GPIO_INT;
-	uart0_putstring("\n***ISR***\n");
+//	uart0_putstring("\n***ISR***\n");
 	//check IOIntStatus bit 0 - LPCUM 10.5.6.1. If 1, PORT0 interrupt.
 	if(!(IOIntStat & 1)){
 		ENABLE_GPIO_INT;
@@ -91,26 +125,21 @@ void IMU_isr(){
 
 	//IO0IntStatR for pin interrupt status
 	//IO0IntClr to clear interrupt
-	if((IO0IntStatR & (ACCEL_INT1 | ACCEL_INT2))){
+	if(IO0IntStatR & ACCEL_INT1){
 		LIS331HH_get_data(LIS331HH_get_data_callback);
-		IO0IntClr =	ACCEL_INT1 | ACCEL_INT2;
+		IO0IntClr =	ACCEL_INT1;
 	}
-//	if((IO0IntStatR & (MAG_INT1 | MAG_INT2 | MAG_DRDY)) == 1){
-//		LSM303DLH_m_get_data(LSM303DLH_m_get_data_callback);
-//		IO0IntClr =	MAG_INT1 | MAG_INT2 | MAG_DRDY;
-//	}
-//	if((IO0IntStatR & MAG_DRDY)){
-//		LSM303DLH_m_get_data(LSM303DLH_m_get_data_callback);
-//		IO0IntClr =	 MAG_DRDY;
-//	}
-//	if((IO0IntStatR & (GYRO_INT1 | GYRO_INT2)) == 1){
-//		L3G4200D_get_data(L3G4200D_get_data_callback);
-//		IO0IntClr =	GYRO_INT1 | GYRO_INT2;
-//	}
+	if(IO0IntStatR & MAG_DRDY){
+		LSM303DLH_m_get_data(LSM303DLH_m_get_data_callback);
+		IO0IntClr =	 MAG_DRDY;
+	}
+	if(IO0IntStatR & GYRO_INT2){
+		L3G4200D_get_data(L3G4200D_get_data_callback);
+		IO0IntClr = GYRO_INT2;
+	}
 
-	ENABLE_GPIO_INT; //enable in callback? I think it will be safe here as it is rising edge only
+	ENABLE_GPIO_INT;
 	VICAddress = 0x0;
-
 }
 
 //configures the uc for IMU work
@@ -120,9 +149,10 @@ void IMU_init(){
 	//pinmode?
 	//GPIO input  by default
 	//configure specific pins for interrupt. IO0IntEnR for rising edge interrupt
-	//IO2IntEnR = ACCEL_INT1 | ACCEL_INT2 | MAG_INT1 | MAG_INT1 | MAG_DRDY | GYRO_INT1 | GYRO_INT2;
-	//IO2IntEnR = MAG_DRDY;
-//	IO0IntEnR = ACCEL_INT1 | ACCEL_INT2;
+//	IO0IntEnR |= MAG_INT1 | MAG_INT1;
+	IO0IntEnR |= MAG_DRDY;
+	IO0IntEnR |= ACCEL_INT1;
+	IO0IntEnR |= GYRO_INT2;
 	//configure other wires, (addresses, etc.)
 	//p0.9  = 1 (accel i2c mode)
 	//p0.6  = 0 (accel i2c lsb 0)
@@ -138,9 +168,8 @@ void IMU_init(){
 	LIS331HH_init(I2C1);
 	LSM303DLH_init_m(I2C2);
 
-//    VICVectAddr17 = (unsigned int) IMU_isr; //uint?
-//    VICAddress = 0x0;
-//    ENABLE_GPIO_INT;
+    VICVectAddr17 = (unsigned int) IMU_isr; //uint?
+    ENABLE_GPIO_INT;
 }
 
 void IMU_task(){
@@ -152,48 +181,46 @@ void IMU_task(){
 	uart0_putstring("\n***init done***\n");
 	RED_LED_OFF;
 	BLUE_LED_ON;
-	mag_data.modified = 0;
-	gyro_data.modified = 0;
-	xyz_data.modified = 0;
+	mag_data.modified = FALSE;
+	gyro_data.modified = FALSE;
+	accel_data.modified = FALSE;
 
-	//if any of the int lines are high sw trigger interrupt.?
-//	if((FIO0PIN & MAG_DRDY)){
-//		RAISE_GPIO_INT;
-//	}
-	//printf_lpc(UART0, "    GPIO Status: 0x%X\n", (FIO0PIN & MAG_DRDY));
+	//if any of the int lines are high, read data to clear.
+	if(FIO0PIN & MAG_DRDY){
+		LSM303DLH_m_get_data(empty_callback);
+	}
+	if(FIO0PIN & ACCEL_INT1){
+		LIS331HH_get_data(empty_callback);
+	}
+	if(FIO0PIN & GYRO_INT2){
+		L3G4200D_get_data(empty_callback);
+	}
 	while(1){
-		//if(mag_data.modified == 1){
-		//uart0_putstring("***loop***\n");
-		if(accel_data_rdy()){
-//		if(xyz_data.modified == 1){
-			LIS331HH_get_data(LIS331HH_get_data_callback);
-			xyz_data.modified = 0;
-			color_led_flash(1, RED_LED, FLASH_FAST );
-			printf_lpc(UART0, "    X axis: %d     y axis: %d    z axis: %d\n",
-					   xyz_data.x,
-					   xyz_data.y,
-					   xyz_data.z);
-		}
-//		if(gyro_data_rdy()){
-//			L3G4200D_get_data(L3G4200D_get_data_callback);
-//			gyro_data.modified = 0;
-//			poll_wait(I2C0);
-//			printf_lpc(UART0, "    X gyro: %d     y gyro: %d    z gyro: %d, TEMP: %d\n",
-//					   gyro_data.x,
-//					   gyro_data.y,
-//					   gyro_data.z,
-//					   temp_data);
 
-//		}
-//		if(mag_data_rdy_m()){
-//			LSM303DLH_m_get_data(LSM303DLH_m_get_data_callback);
-//			mag_data.modified = 0;
-//			color_led_flash(1, RED_LED, FLASH_FAST );
-//			printf_lpc(UART0, "     X mag: %d     y mag: %d    z mag: %d\n",
-//					   mag_data.x,
-//					   mag_data.y,
-//					   mag_data.z);
-//		}
+		if(accel_data.modified == TRUE){
+			printf_lpc(UART0, "    X axis: %d     y axis: %d    z axis: %d\n",
+					   accel_data.x,
+					   accel_data.y,
+					   accel_data.z);
+			accel_data.modified = FALSE;
+		}
+
+		if(gyro_data.modified){
+			printf_lpc(UART0, "    X gyro: %d     y gyro: %d    z gyro: %d, TEMP: %d\n",
+					   gyro_data.x,
+					   gyro_data.y,
+					   gyro_data.z,
+					   temp_data);
+			gyro_data.modified = FALSE;
+
+		}
+		if(mag_data.modified){
+			printf_lpc(UART0, "    X mag: %d     y mag: %d    z mag: %d\n",
+					   mag_data.x,
+					   mag_data.y,
+					   mag_data.z);
+			mag_data.modified = FALSE;
+		}
 	}
 }
 
@@ -223,8 +250,3 @@ int main (void) {
 
     return(0);
 }
-
-
-//PINSEL1  |= 0x1 << 22; //enables EINT1 on p2.11
-//PINMODE1 |= 0x2 << 22; //make p2.11 pushpull
-//EXTMODE = 0x1 << 1; //make eint1 edge detect

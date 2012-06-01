@@ -14,6 +14,7 @@ void LIS331HH_init(i2c_iface);
 void LIS331HH_get_data(XACT_FnCallback* xact_fn) ;
 int LIS331HH_data_overrun(uint8_t status_reg);
 int LIS331HH_data_available(uint8_t status_reg);
+int LIS331HH_set_ctrl_reg(int, uint8_t);
 
 #define LIS331HH_ADDR			(0x18)
 
@@ -69,7 +70,7 @@ int LIS331HH_data_available(uint8_t status_reg);
 #define A_ODR_100				(0x28)
 #define A_ODR_400				(0x30)
 #define A_ODR_1000				(0x38)
-#define A_LPWR_LP_37			(0x00)
+#define A_LPWR_LP_37			(0x00)//wtf is this for?
 #define A_LPWR_LP_74			(0x08)
 #define A_LPWR_LP_292			(0x10)
 #define A_LPWR_LP_780			(0x18)

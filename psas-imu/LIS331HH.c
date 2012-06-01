@@ -20,7 +20,7 @@
 #include "gfe2368-util.h"
 #include "LIS331HH.h"
 
-static i2c_iface i2c_channel;
+static i2c_iface i2c_channel = I2C1;
 
 //TODO: self-test
 
@@ -38,7 +38,7 @@ void LIS331HH_init(i2c_iface i2c_ch){
     //ctrl register setup
 	accel_init.i2c_tx_buffer[0]  = i2c_create_write_address(LIS331HH_ADDR);
 	accel_init.i2c_tx_buffer[1]  = A_CTRL_REG1 | A_AUTO_INCREMENT; //initial ctrl register addr
-	accel_init.i2c_tx_buffer[2]  = A_ODR_100 | A_ALL_AXIS_ENABLE; //CTRL_REG1 data
+	accel_init.i2c_tx_buffer[2]  = A_LPWR_ODR_5 | A_ALL_AXIS_ENABLE; //CTRL_REG1 data
 	accel_init.i2c_tx_buffer[3]  = A_CTRL_REG2_DEFAULT;
 	accel_init.i2c_tx_buffer[4]  = A_INT_ACTIVE_HIGH | A_INT1_DRDY | A_INT1_LATCH; //interupt 1 fires on data ready
 	accel_init.i2c_tx_buffer[5]  = A_BDU;
@@ -48,7 +48,7 @@ void LIS331HH_init(i2c_iface i2c_ch){
 }
 
 void LIS331HH_get_data(XACT_FnCallback* xact_fn){
-	i2c_master_xact_t       xact0_s;
+	i2c_master_xact_t xact0_s;
 
 	xact0_s.i2c_tx_buffer[0]  = i2c_create_write_address(LIS331HH_ADDR);
 	xact0_s.i2c_tx_buffer[1]  = A_STATUS_REG | A_AUTO_INCREMENT;
@@ -65,4 +65,37 @@ int LIS331HH_data_overrun(uint8_t status_reg){
 
 int LIS331HH_data_available(uint8_t status_reg){
 	return ((status_reg & A_ZYXDA) == A_ZYXDA);
+}
+
+int LIS331HH_set_ctrl_reg(int reg, uint8_t val){
+	i2c_master_xact_t accel;
+	uint8_t reg_addr;
+	switch(reg){
+	case 1:
+		reg_addr = A_CTRL_REG1;
+		break;
+	case 2:
+		reg_addr = A_CTRL_REG2;
+		break;
+	case 3:
+		reg_addr = A_CTRL_REG3;
+		break;
+	case 4:
+		reg_addr = A_CTRL_REG4;
+		break;
+	case 5:
+		reg_addr = A_CTRL_REG5;
+		break;
+	default:
+		return 0;
+	}
+
+
+	accel.i2c_tx_buffer[0] = i2c_create_write_address(LIS331HH_ADDR);
+	accel.i2c_tx_buffer[1] = reg_addr;
+	accel.i2c_tx_buffer[2] = val;
+	accel.write_length     = 0x3;
+
+	start_i2c_master_xact(i2c_channel, &accel, empty_callback);
+	return 1;
 }

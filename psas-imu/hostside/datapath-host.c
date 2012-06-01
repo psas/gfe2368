@@ -18,6 +18,10 @@
 #include "parse-args.h"
 #include "datapath-host.h"
 
+#define ACCEL	1
+#define GYRO	2
+#define MAG		3
+
 /*
  * dp_read
  * do a bunch of error checking on read
@@ -109,9 +113,9 @@ void datapath_task(const char* portname, const char* logfile, int quiet) {
     FILE*               log;
 
 
-    time_t                begin, end;
-    double                totalsecs;
-    double                avgrate;
+    time_t              begin, end;
+    double              totalsecs;
+    double              avgrate;
 
     int                 bytecount = 0;
     int                 check; 
@@ -121,18 +125,18 @@ void datapath_task(const char* portname, const char* logfile, int quiet) {
     int                 write_serial = 0; 
     int                 bytes_serial = 0; 
 
-//    uint                value_serial = 0;
-//    uint                sequence     = 1;
-    int16_t			x = 0;
-    int16_t			y = 0;
-    int16_t			z = 0;
-
-
     int                 bytes_stdin = 0; 
     int                 value_stdin = 0; 
 
     struct termios      orig_tios;
     struct termios      orig_stdin_tios;
+
+//    int16_t				axis[3]; //axis[0] = x, axis[1] = y, axis[2] = z
+//    int8_t				sensor;
+    int16_t				x;
+    int16_t				y;
+    int16_t				z;
+
 
     log = fopen(logfile, "w");
     if(log == NULL) {
@@ -160,6 +164,7 @@ void datapath_task(const char* portname, const char* logfile, int quiet) {
         fprintf(stderr,"flush port failed.\n");
         exit(EXIT_FAILURE);
     }
+
     printf("\nOptions: (s)-stop, (r)-reset, (g)-go, (f)-flush host buffer, (q)-quit\n");
     while(1) {
         bytes_stdin = read(0, &value_stdin, 1);
@@ -175,7 +180,7 @@ void datapath_task(const char* portname, const char* logfile, int quiet) {
                 printf("\nFlush buffer.\n");
                 continue;
             } else {
-                printf("\nOptions: (s)-stop, (r)-reset, (g)-go, (f)-flush host buffer, (q)-quit\n");
+                printf("\nOptions: (s)-stop, (r)-reset, (g)-go, (f)-flush host buffer, (q)-quit\n(+)-increase sample rate, (-)-decrease sample rate\n");
                 printf("\nYou typed: %c", value_stdin);
                 switch(value_stdin) {
                     case 'r': 
@@ -214,25 +219,46 @@ void datapath_task(const char* portname, const char* logfile, int quiet) {
             break;
         }
 
-//        printf("Read from serial...\n");
-        bytes_serial = read(fd, &x, 2);
-        if(bytes_serial < 0) {
-        } else if (bytes_serial > 0) {
-            //printf("\nReceived: %u bytes: 0x%x\n", bytes_serial, value_serial);
-            bytecount += bytes_serial;
-            bytes_serial = read(fd, &y, 2);
-            if (bytes_serial > 0) {
-            	bytes_serial = read(fd, &z, 2);
-            	if (bytes_serial > 0) {
-                    if(quiet == 0) {
-                        printf("x axis: %d    y axis: %d    z axis %d\n", x, y, z);
-                        fprintf(log, "x axis: %d    y axis: %d    z axis %d\n", x, y, z);
-                    }
-            	}
-            }
+//        //read the sensor data from serial
+//        if((bytes_serial = dp_read(fd, sensor, 1)) <=0){continue;}
+//        bytecount += bytes_serial;
+//        switch(sensor){
+//        case ACCEL:
+//        	if((bytes_serial = dp_read(fd, &axis, 6)) <= 0){break;}
+//        	bytecount += bytes_serial;
+//        	if(quiet == 0) {
+//                printf("x axis: %d    y axis: %d    z axis %d\n", axis[0], axis[1], axis[2]);
+//                fprintf(log, "x axis: %d    y axis: %d    z axis %d\n", axis[0], axis[1], axis[2]);
+//            }
+//        	break;
+//        case GYRO:
+//        	break;
+//        case MAG:
+//        	break;
+//        default:
+//        	break;
+//        }
 
 
-        } else {}
+
+		bytes_serial = read(fd, &x, 2);
+		if(bytes_serial < 0) {
+		} else if (bytes_serial > 0) {
+			//printf("\nReceived: %u bytes: 0x%x\n", bytes_serial, value_serial);
+			bytecount += bytes_serial;
+			bytes_serial = read(fd, &y, 2);
+			if (bytes_serial > 0) {
+				bytes_serial = read(fd, &z, 2);
+				if (bytes_serial > 0) {
+					if(quiet == 0) {
+						printf("x axis: %d    y axis: %d    z axis %d\n", x, y, z);
+						fprintf(log, "x axis: %d    y axis: %d    z axis %d\n", x, y, z);
+					}
+				}
+			}
+
+
+		} else {}
     }
 
     printf("Closing serial port.\n");

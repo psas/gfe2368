@@ -11,6 +11,8 @@
 #include "lpc23xx-types.h"
 
 void IMU_isr() __attribute__ ((interrupt("IRQ")));
+// forward declaration of interrupt handler
+static void USBIntHandler(void) __attribute__ ((interrupt("IRQ")));
 
 #define VIC_GPIO_BIT        (17)
 #define ENABLE_GPIO_INT     (VICIntEnable |= (1<<VIC_GPIO_BIT))
@@ -24,6 +26,18 @@ typedef struct axis_data{
 	int16_t z;
 	BOOL modified;
 } axis_data;
+
+typedef enum {GO=0, STOP, RESET} runstate_type;
+
+// data structure for GET_LINE_CODING / SET_LINE_CODING class requests
+typedef struct {
+    uint32_t            dwDTERate;
+    uint8_t             bCharFormat;
+    uint8_t             bParityType;
+    uint8_t             bDataBits;
+} TLineCoding;
+
+
 /*GPIO 0 wiring*/
 //P0.00 CAN
 //P0.01 CAN

@@ -17,6 +17,7 @@ INCLUDE         := -I.\
                    -I$(LPCLIBDIR)/lpc23xx-binsem/include\
                    -I$(LPCLIBDIR)/lpc23xx-i2c/include\
                    -I$(LPCLIBDIR)/lpc23xx-vic/include\
+                   -I$(LPCLIBDIR)/lpc23xx-timer/include\
                    -I$(LIBDIR)/gfe2368-info/include\
                    -I$(LIBDIR)/gfe2368-util/include
 

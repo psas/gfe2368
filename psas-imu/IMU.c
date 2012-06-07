@@ -41,7 +41,6 @@
 
 #include "lpc23xx-binsem.h"
 
-
 #define BAUD_RATE               115200
 
 #define INT_IN_EP               0x81
@@ -77,7 +76,9 @@ struct {
 #define GYRO	2
 #define MAG		3
 
+static uint32_t L3G4200D_timestamp;
 static uint32_t LIS331HH_timestamp;
+static uint32_t LSM303DLH_m_timestamp;
 
 
 static const uint8_t abDescriptors[] = {
@@ -421,13 +422,22 @@ static void USBDevIntHandler(uint8_t bDevStatus)
     }
 }
 
-
+static void poll_wait(i2c_iface i2c_ch) {
+	switch(i2c_ch){
+    case I2C0:
+    	while(is_binsem_locked(&i2c0_binsem_g)== 1);
+    	break;
+    case I2C1:
+    	while(is_binsem_locked(&i2c1_binsem_g)== 1);
+    	break;
+    case I2C2:
+    	while(is_binsem_locked(&i2c2_binsem_g)== 1);
+    	break;
+     }
+}
 
 void LIS331HH_get_data_callback(i2c_master_xact_t* caller, i2c_master_xact_t* i2c_s){
 	//TODO: send xact_success failure over USB
-	uint32_t end_time;
-	uint32_t ticks_per_usec;
-	uint32_t call_time;
 	if(!(i2c_s->xact_success)){
 		uart0_putstring("\n***LIS331HH GET DATA FAILED***\n");
 		return;
@@ -438,10 +448,6 @@ void LIS331HH_get_data_callback(i2c_master_xact_t* caller, i2c_master_xact_t* i2
 //	VCOM_putword(LIS331HH_timestamp);
 	//TODO: Sensor status register
 //	VCOM_putchar(i2c_s->i2c_rd_buffer[0]); //status register
-	end_time = T0TC;
-	ticks_per_usec = microsecondsToCPUTicks(1);
-	call_time = (end_time - LIS331HH_timestamp)/ticks_per_usec;
-	printf_lpc(UART0, "LIS331HH i2c call time (usecs): %d\n", call_time);
 
 	VCOM_putchar(i2c_s->i2c_rd_buffer[1]); //x low
 	VCOM_putchar(i2c_s->i2c_rd_buffer[2]); //x high
@@ -453,36 +459,82 @@ void LIS331HH_get_data_callback(i2c_master_xact_t* caller, i2c_master_xact_t* i2
 	VCOM_putchar(i2c_s->i2c_rd_buffer[6]); //z high
 }
 
+void L3G4200D_get_data_callback(i2c_master_xact_t* caller, i2c_master_xact_t* i2c_s){
+	//TODO: send xact_success failure over USB
+	//TODO: Sensor ID
+//	VCOM_putchar(GYRO);
+	//TODO: Time stamp
+//	VCOM_putword(L3G4200D_timestamp);
+	//TODO: Sensor status register
+//	VCOM_putchar(i2c_s->i2c_rd_buffer[1]); //status register
+
+	VCOM_putchar(i2c_s->i2c_rd_buffer[2]); //x low
+	VCOM_putchar(i2c_s->i2c_rd_buffer[3]); //x high
+
+	VCOM_putchar(i2c_s->i2c_rd_buffer[4]); //y low
+	VCOM_putchar(i2c_s->i2c_rd_buffer[5]); //y high
+
+	VCOM_putchar(i2c_s->i2c_rd_buffer[6]); //z low
+	VCOM_putchar(i2c_s->i2c_rd_buffer[7]); //z high
+
+//	VCOM_putchar(i2c_s->i2c_rd_buffer[0]); //temp
+}
+
+void LSM303DLH_m_get_data_callback(i2c_master_xact_t* caller, i2c_master_xact_t* i2c_s){
+	//TODO: send xact_success failure over USB
+	//TODO: Sensor ID
+//	VCOM_putchar(MAG);
+	//TODO: Time stamp
+//	VCOM_putword(LSM303DLH_m_timestamp);
+	//TODO: Sensor status register?
+
+	VCOM_putchar(i2c_s->i2c_rd_buffer[0]); //x low
+	VCOM_putchar(i2c_s->i2c_rd_buffer[1]); //x high
+
+	VCOM_putchar(i2c_s->i2c_rd_buffer[2]); //y low
+	VCOM_putchar(i2c_s->i2c_rd_buffer[3]); //y high
+
+	VCOM_putchar(i2c_s->i2c_rd_buffer[4]); //z low
+	VCOM_putchar(i2c_s->i2c_rd_buffer[5]); //z high
+}
+
 static void empty_callback(i2c_master_xact_t* caller, i2c_master_xact_t* i2c_s) {
 	if(!(i2c_s->xact_success)){
-		uart0_putstring("\n***Empty I2C call failed***\n");
+		uart0_putstring("\n***Some IMU I2C call failed***\n");
 	}
 	return;
 }
 
 void IMU_isr(){
-	DISABLE_GPIO_INT;
-
-	if(!(IOIntStat & 1)){ //interrupt is not for IMU
-		ENABLE_GPIO_INT;
-		return;
+//	DISABLE_GPIO_INT;
+	uint32_t timestamp = T0TC;
+	//check IOIntStatus bit 0 - LPCUM 10.5.6.1. If 1, PORT0 interrupt.
+	if(!(IOIntStat & 1)){
+//		ENABLE_GPIO_INT;
+		return; //interrupt is not for IMU
 	}
 
-	if(IO0IntStatR & ACCEL_INT1){
-		LIS331HH_timestamp = T0TC;
+	//IO0IntStatR for pin interrupt status
+	//IO0IntClr to clear interrupt
+	if((IO0IntStatR & GYRO_INT2)){// || L3G4200D_STUCK){
+		L3G4200D_timestamp = timestamp;
+		L3G4200D_get_data(L3G4200D_get_data_callback);
+		IO0IntClr = GYRO_INT2;
+	}
+
+	if((IO0IntStatR & ACCEL_INT1)){// || LIS331HH_STUCK){
+		LIS331HH_timestamp = timestamp;
 		LIS331HH_get_data(LIS331HH_get_data_callback);
 		IO0IntClr =	ACCEL_INT1;
 	}
-//	if(IO0IntStatR & MAG_DRDY){
-//		LSM303DLH_m_get_data(LSM303DLH_m_get_data_callback);
-//		IO0IntClr =	 MAG_DRDY;
-//	}
-//	if(IO0IntStatR & GYRO_INT2){
-//		L3G4200D_get_data(L3G4200D_get_data_callback);
-//		IO0IntClr = GYRO_INT2;
-//	}
 
-	ENABLE_GPIO_INT;
+	if((IO0IntStatR & MAG_DRDY)){// || LSM303DLH_M_STUCK){
+		LSM303DLH_m_timestamp = timestamp;
+		LSM303DLH_m_get_data(LSM303DLH_m_get_data_callback);
+		IO0IntClr =	 MAG_DRDY;
+	}
+
+//	ENABLE_GPIO_INT;
 	VICAddress = 0x0;
 }
 
@@ -501,6 +553,10 @@ void IMU_init(){
 //	L3G4200D_init(I2C0);
 	LIS331HH_init(I2C1);
 //	LSM303DLH_init_m(I2C2);
+
+    timer_init(TIMER_0, 0x0 , CCLK_DIV1);
+	RESET_TIMER0;
+	START_TIMER0;
 
     VICVectAddr17 = (unsigned int) IMU_isr; //uint?
     ENABLE_GPIO_INT;
@@ -539,16 +595,16 @@ static void stream_task() {
 //			IO0IntEnR |= MAG_DRDY;
 			IO0IntEnR |= ACCEL_INT1;
 //			IO0IntEnR |= GYRO_INT2;
-
-//			if(FIO0PIN & MAG_DRDY){
-//				LSM303DLH_m_get_data(empty_callback);
-//			}
-//			if(FIO0PIN & ACCEL_INT1){
+			if(L3G4200D_STUCK){
+				L3G4200D_get_data(empty_callback);
+			}
+			if(LIS331HH_STUCK){
 				LIS331HH_get_data(empty_callback);
-//			}
-//			if(FIO0PIN & GYRO_INT2){
-//				L3G4200D_get_data(empty_callback);
-//			}
+			}
+			if(LSM303DLH_M_STUCK){
+				LSM303DLH_m_get_data(empty_callback);
+			}
+
 			runstate_g.state = GO;
 			break;
 		default:
@@ -557,6 +613,8 @@ static void stream_task() {
 			RED_LED_ON;
 			break;
 		}
+
+	while(1){
 		c = VCOM_getchar();
 		if (c != EOF) {
 			// show on console
@@ -601,25 +659,13 @@ static void stream_task() {
 				DBG(UART0,".");
 
 			}
+			c
 
 		}
 	}
 
 }
 
-static void poll_wait(i2c_iface i2c_ch) {
-	switch(i2c_ch){
-    case I2C0:
-    	while(is_binsem_locked(&i2c0_binsem_g)== 1);
-    	break;
-    case I2C1:
-    	while(is_binsem_locked(&i2c1_binsem_g)== 1);
-    	break;
-    case I2C2:
-    	while(is_binsem_locked(&i2c2_binsem_g)== 1);
-    	break;
-     }
-}
 
 /*************************************************************************
   main
@@ -687,12 +733,19 @@ int main(void){
     BLUE_LED_ON;
 
     DBG(UART0,"USBHwConnect\n");
-    //todo: make i2c_freq_normal_mode() and i2c_freq_fast_mode()
-    i2c_init(I2C0, DEFAULT);
-	//i2c_freq(I2C0, (uint16_t) 100, (uint16_t) 100);//this should be the normal i2c freq...?
 
-	i2c_init(I2C1, I2C1_ALTPIN);
-	//i2c_freq(I2C1, (uint16_t) 100, (uint16_t) 100);
+    i2c_init(I2C0, DEFAULT);
+    i2c_kHz(I2C0, 400);
+
+    i2c_init(I2C1, I2C1_ALTPIN);
+    i2c_kHz(I2C1, 400);
+
+    i2c_init(I2C2, DEFAULT);
+    i2c_kHz(I2C2, 400);
+
+    uart0_putstring("\n\n\n***Starting IMU test (GFE2368)***\n\n");
+    init_color_led();
+    RED_LED_ON;
 
 	i2c_init(I2C2, DEFAULT);
 	//i2c_freq(I2C2, (uint16_t) 100, (uint16_t) 100);

@@ -79,7 +79,7 @@ void print_libusberror(int libusberrno) {
 static int save_bulk_in(uint8_t *data, int32_t length) {
     FILE *fd;
     char filename[64];
-    size_t ignore;
+    ssize_t ignore;
     int  i = 0;
 
     sprintf(filename, "dp_bulk_in.data");
@@ -259,7 +259,7 @@ void dp_task() {
     double              totalsecs;
     double              avgrate;
 
-    uint32_t            i                = 0;
+    uint32_t            i                = 0; //is now state
 
     int32_t             ret              = 1;
     int32_t             bytecount        = 0;
@@ -352,12 +352,15 @@ void dp_task() {
             switch(value_stdin) {
                 case 'r':
                     sequence = 1;
+                    i = 1;
                     printf("\tRESET\n");
                     break;
                 case 'g':
+                	i = 1;
                     printf("\tGO\n");
                     break;
                 case 's':
+                	i = 0;
                     printf("\tSTOP\n");
                     break;
                 default:
@@ -401,10 +404,14 @@ void dp_task() {
 
         bytecount += bytes_out;
         // if(ret!=0) print_libusberror(ret);
-
-        for(i=0; i<bytes_out; i=i+4) {
-            print_word(&value_usb[i]);
-       }
+        int16_t x = ((uint16_t)value_usb[1] << 8) + (uint16_t)value_usb[0];
+        int16_t y = ((uint16_t)value_usb[3] << 8) + (uint16_t)value_usb[2];
+        int16_t z = ((uint16_t)value_usb[5] << 8) + (uint16_t)value_usb[4];
+        if(i)
+        	printf("X: %10d, Y: %10d, Z: %10d\n", x/16, y/16, z/16);
+//        for(i=0; i<bytes_out; i=i+4) {
+//            print_word(&value_usb[i]);
+//       }
     }
 }
 

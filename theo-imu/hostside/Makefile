@@ -1,12 +1,12 @@
 
 
 
-NAME		= datapath-host
+NAME		= imu-host
 
 CC		= gcc
 CPP		= g++
 
-LDFLAGS         = -lm
+LDFLAGS         = -lm -lglib-2.0 -lusb-1.0
 LDPPFLAGS       = -lm
 
 LD              = $(CC) $(LDFLAGS)
@@ -15,18 +15,19 @@ LDPP            = $(CPP) $(LDPPFLAGS)
 AR		= ar rcvs
 
 INCLUDE         = -I.\
-		  -I./include
-
- 
+                  -I./include\
+                  -I/usr/include/glib-2.0\
+                  -I/usr/lib/i386-linux-gnu/glib-2.0/include\
+ 				  -I/usr/include/libusb-1.0
 DEBUG           =
 
-CFLAGS          = $(INCLUDE) -c $(DEBUG) -Wall -O3 -g
+CFLAGS          = $(INCLUDE) -c $(DEBUG) -Wall -O3 -g #-Wextra
 
 CPPFLAGS	= $(INCLUDE) -c $(DEBUG) -Wall -Wextra -g  -ansi -pedantic -O3
 
 ###### SOURCES  #################
 
-CSRCS		 = $(NAME).c serial-port.c parse-args.c helpers.c
+CSRCS		 = $(NAME).c libusb-source.c usb-transfer-source.c
 CPPSRCS		 =
 
 COBJS            = $(CSRCS:.c=.o)
@@ -82,7 +83,7 @@ $(LIBS): $(LIBSRCS) $(LIBOBJS) $(EXLIBS)
 
 $(EXES): $(COBJS)
 	@echo "---------------- LINKING $@ --------------"
-	@$(LD) -o $@ $(COBJS) 
+	@$(LD) -o $@ $(COBJS) -lusb-1.0 -lglib-2.0
 clean:
 	@$(RM) $(EXES) $(COBJS) $(CPPOBJS) \
 	lib$(NAME).a *.report\

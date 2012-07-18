@@ -516,19 +516,19 @@ void IMU_isr(){
 
 	//IO0IntStatR for pin interrupt status
 	//IO0IntClr to clear interrupt
-	if((IO0IntStatR & GYRO_INT2)){// || L3G4200D_STUCK){
+	if((IO0IntStatR & GYRO_INT2) || L3G4200D_STUCK){
 		L3G4200D_timestamp = timestamp;
 		L3G4200D_get_data(L3G4200D_get_data_callback);
 		IO0IntClr = GYRO_INT2;
 	}
 
-	if((IO0IntStatR & ACCEL_INT1)){// || LIS331HH_STUCK){
+	if((IO0IntStatR & ACCEL_INT1) || LIS331HH_STUCK){
 		LIS331HH_timestamp = timestamp;
 		LIS331HH_get_data(LIS331HH_get_data_callback);
 		IO0IntClr =	ACCEL_INT1;
 	}
 
-	if((IO0IntStatR & MAG_DRDY)){// || LSM303DLH_M_STUCK){
+	if((IO0IntStatR & MAG_DRDY) || LSM303DLH_M_STUCK){
 		LSM303DLH_m_timestamp = timestamp;
 		LSM303DLH_m_get_data(LSM303DLH_m_get_data_callback);
 		IO0IntClr =	 MAG_DRDY;
@@ -539,11 +539,14 @@ void IMU_isr(){
 }
 
 void IMU_init(){
+    i2c_init(I2C0, DEFAULT);
+    i2c_kHz(I2C0, 400);
 
-	timer_init(TIMER_0,  (uint32_t) 0x0 , CCLK_DIV1);
+    i2c_init(I2C1, I2C1_ALTPIN);
+    i2c_kHz(I2C1, 400);
 
-	RESET_TIMER0;
-	START_TIMER0;
+    i2c_init(I2C2, DEFAULT);
+    i2c_kHz(I2C2, 400);
 
 	//configure other wires, (addresses, etc.)
 	FIO0DIR |= ACCEL_SA0 | ACCEL_CS | MAG_SA | GYRO_SA0 | GYRO_CS;
@@ -553,6 +556,10 @@ void IMU_init(){
 //	L3G4200D_init(I2C0);
 	LIS331HH_init(I2C1);
 //	LSM303DLH_init_m(I2C2);
+
+	poll_wait(I2C0);
+	poll_wait(I2C1);
+	poll_wait(I2C2);
 
     timer_init(TIMER_0, 0x0 , CCLK_DIV1);
 	RESET_TIMER0;
@@ -568,8 +575,8 @@ void IMU_init(){
 static void stream_task() {
 	int c       = 0;
 	const uint8_t LIS331HH_speed[] = {0x5F, 0x7F, 0x9F, 0xBF, 0xDF, 0x27, 0x2F, 0x37, 0x3F}; //magic numbers
-	const int LIS331HH_Hz[] = {5, 1, 2, 5, 10, 50, 100, 400, 1000};
-	int current_speed = 4;	//A_LPWR_ODR_5																 //casts correct spell
+	const int LIS331HH_Hz[] = {5, 1, 2, 5, 10, 50, 100, 400, 1000};							 //casts correct spell
+	int current_speed = 4;	//A_LPWR_ODR_5
 	runstate_g.state = STOP;
 
 	VCOM_putword(0xfeed);
@@ -580,17 +587,7 @@ static void stream_task() {
 //	        util_wait_msecs(20);
 		switch(runstate_g.state) {
 		case GO:
-			break;
-		case STOP:
-			IO0IntClr = ACCEL_INT1;
-//			IO0IntClr = GYRO_INT2;
-//			IO0IntClr = MAG_DRDY;
-			all_led_off();
-			BLUE_LED_ON;
-			// stop getting samples
-			break;
-		case RESET:
-			// clear fifo?
+// 			clear fifo?
 //			IO0IntEnR |= MAG_INT1 | MAG_INT1;
 //			IO0IntEnR |= MAG_DRDY;
 			IO0IntEnR |= ACCEL_INT1;
@@ -605,6 +602,19 @@ static void stream_task() {
 				LSM303DLH_m_get_data(empty_callback);
 			}
 
+			all_led_off();
+			GREEN_LED_ON;
+			runstate_g.state = GO;
+			break;
+		case STOP:
+			IO0IntClr = ACCEL_INT1;
+//			IO0IntClr = GYRO_INT2;
+//			IO0IntClr = MAG_DRDY;
+			all_led_off();
+			BLUE_LED_ON;
+			// stop getting samples
+			break;
+		case RESET:
 			runstate_g.state = GO;
 			break;
 		default:
@@ -614,52 +624,69 @@ static void stream_task() {
 			break;
 		}
 
-	while(1){
 		c = VCOM_getchar();
-		if (c != EOF) {
-			// show on console
-			if (c == 'g' ) {
-				all_led_off();
-				GREEN_LED_ON;
-				runstate_g.state = GO;
-				DBG(UART0,"Go detected\n");
-			} else if (c == 's' ) {
-        		runstate_g.state = STOP;
-				DBG(UART0,"Stop detected\n");
-			} else if (c == 'm' ) {
-				printf_lpc(UART0,"\nOptions: (s)-stop, (r)-reset, (g)-go, (f)-flush host buffer, (q)-quit\n(+)-increase sample rate, (-)-decrease sample rate\n");
-				DBG(UART0,"Menu detected\n");
-			} else if (c == 'q' ) {
-				runstate_g.state = RESET;
-				DBG(UART0,"Quit detected\n");
-			} else if (c == 'r' ) {
-				runstate_g.state = RESET;
-				DBG(UART0,"Reset detected\n");
-			} else if (c == '+') {
-				if(current_speed < 8){
-					++current_speed;
-					printf_lpc(UART0, "Increased speed to %d Hz\n", LIS331HH_Hz[current_speed]);
-				}
+		switch(c){
+		case EOF:
+			//show on console
+			break;
+
+		case 'g':
+			all_led_off();
+			GREEN_LED_ON;
+			runstate_g.state = GO;
+			DBG(UART0,"Go detected\n");
+			break;
+
+		case 's':
+			runstate_g.state = STOP;
+			DBG(UART0,"Stop detected\n");
+			break;
+
+		case 'm':
+			printf_lpc(UART0,"\nOptions: (s)-stop, (g)-go, (q)-quit\n(+)-increase sample rate, (-)-decrease sample rate\n");
+			DBG(UART0,"Menu detected\n");
+			break;
+
+		case 'q':
+			runstate_g.state = STOP;
+			DBG(UART0,"Quit detected\n")
+			break;
+
+		case 'r':
+			runstate_g.state = RESET;
+			DBG(UART0,"Quit detected\n");
+			break;
+
+		case '+':
+			if(current_speed < 8){
+				++current_speed;
+				printf_lpc(UART0, "Increased speed to %d Hz\n", LIS331HH_Hz[current_speed]);
 				LIS331HH_set_ctrl_reg(1, LIS331HH_speed[current_speed]);
-			} else if (c == '-'){
-				if(current_speed > 0){
-					--current_speed;
-					printf_lpc(UART0, "Decreased speed to %d Hz\n", LIS331HH_Hz[current_speed]);
-				}
+			}
+			break;
+
+		case '-':
+			if(current_speed > 0){
+				--current_speed;
+				printf_lpc(UART0, "Decreased speed to %d Hz\n", LIS331HH_Hz[current_speed]);
 				LIS331HH_set_ctrl_reg(1, LIS331HH_speed[current_speed]);
-			} else if ((c == 9) || (c == 10) || (c == 13) || ((c >= 32) && (c <= 126))) {
+			}
+			break;
+
+		default:
+			if ((c == 9) || (c == 10) || (c == 13) || ((c >= 32) && (c <= 126))) {
 				if(VCOM_putchar(c) == EOF){
 					DBG(UART0, "Failed putting char in VCOM");
 					runstate_g.state = RESET;
 				}
 				DBG(UART0,"%c", c);
-			}
-			else {
-                color_led_flash(5, RED_LED, FLASH_FAST ) ;
+			} else {
+				color_led_flash(5, RED_LED, FLASH_FAST ) ;
 				DBG(UART0,".");
-
 			}
-			c
+			break;
+
+		}
 
 		}
 	}
@@ -687,7 +714,7 @@ int main(void){
 
     DBG(UART0,"Initialising USB stack...\n");
 
-    // initialise stack
+    // Initialize stack
     USBInit();
 
     DBG(UART0,"Past USBInit\n");
@@ -711,7 +738,7 @@ int main(void){
     // register device event handler
     USBHwRegisterDevIntHandler(USBDevIntHandler);
 
-    // initialise VCOM
+    // Initialize VCOM
     VCOM_init();
 
     DBG(UART0,"Starting USB communication\n");
@@ -734,26 +761,11 @@ int main(void){
 
     DBG(UART0,"USBHwConnect\n");
 
-    i2c_init(I2C0, DEFAULT);
-    i2c_kHz(I2C0, 400);
-
-    i2c_init(I2C1, I2C1_ALTPIN);
-    i2c_kHz(I2C1, 400);
-
-    i2c_init(I2C2, DEFAULT);
-    i2c_kHz(I2C2, 400);
-
     uart0_putstring("\n\n\n***Starting IMU test (GFE2368)***\n\n");
     init_color_led();
     RED_LED_ON;
 
-	i2c_init(I2C2, DEFAULT);
-	//i2c_freq(I2C2, (uint16_t) 100, (uint16_t) 100);
-
 	IMU_init();
-	poll_wait(I2C0);
-	poll_wait(I2C1);
-	poll_wait(I2C2);
 
     stream_task();
 

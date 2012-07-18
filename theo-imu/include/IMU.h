@@ -81,9 +81,17 @@ typedef struct {
 #define GYRO_INT2	(1<<24)
 #define GYRO_CS		(1<<25)
 #define	GYRO_SA0	(1<<26)
+/*
+ * If the sensor interrupt is enabled and not active, but its drdy line is active
+ * and there is no i2c call going to clear it, it is stuck.
+ */
+#define L3G4200D_STUCK		((IO0IntEnR & GYRO_INT2) && !(IO0IntStatR & GYRO_INT2) && \
+							 (FIO0PIN & GYRO_INT2)   && !is_binsem_locked(&i2c0_binsem_g))
 
-#define L3G4200D_STUCK		((IO0IntEnR & GYRO_INT2) && (FIO0PIN & GYRO_INT2) && !is_binsem_locked(&i2c0_binsem_g))
-#define LIS331HH_STUCK		((IO0IntEnR & ACCEL_INT1)&& (FIO0PIN & ACCEL_INT1)&& !is_binsem_locked(&i2c1_binsem_g))
-#define LSM303DLH_M_STUCK	((IO0IntEnR & MAG_DRDY)  && (FIO0PIN & MAG_DRDY)  && !is_binsem_locked(&i2c2_binsem_g))
+#define LIS331HH_STUCK		((IO0IntEnR & ACCEL_INT1)&& !(IO0IntStatR & ACCEL_INT1)&& \
+                             (FIO0PIN & ACCEL_INT1)  && !is_binsem_locked(&i2c1_binsem_g))
+
+#define LSM303DLH_M_STUCK	((IO0IntEnR & MAG_DRDY)  && !(IO0IntStatR & MAG_DRDY)  && \
+		                     (FIO0PIN & MAG_DRDY)    && !is_binsem_locked(&i2c2_binsem_g))
 
 #endif /* IMU_H_ */

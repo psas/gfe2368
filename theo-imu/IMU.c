@@ -8,6 +8,9 @@
  * 
  */
 
+//todo: hostside-device-interface.h includes packet functions and useful USB macros
+#define DEBUG_USB
+
 #include <stdio.h>                      // EOF
 #include <string.h>                     // memcpy
 #include <limits.h>
@@ -25,6 +28,7 @@
 #include "lpc23xx-vic.h"
 #include "lpc23xx-i2c.h"
 #include "lpc23xx-timer.h"
+#include "lpc23xx-binsem.h"
 
 #include "usbapi.h"
 
@@ -32,14 +36,12 @@
 
 #include "gfe2368-util.h"
 
-//#include "datapath-test.h"
 #include "IMU.h"
 #include "L3G4200D.h"
 #include "LIS331HH.h"
 #include "LSM303DLH.h"
+#include "imu-device-host-interface.h"
 
-
-#include "lpc23xx-binsem.h"
 
 #define BAUD_RATE               115200
 
@@ -71,10 +73,6 @@ static fifo_type           rxfifo;
 struct {
    runstate_type state;
 } runstate_g;
-
-#define ACCEL	1
-#define GYRO	2
-#define MAG		3
 
 static uint32_t L3G4200D_timestamp;
 static uint32_t LIS331HH_timestamp;
@@ -214,9 +212,13 @@ static void BulkOut(uint8_t bEP, uint8_t bEPStatus) {
 
     // get data from USB into intermediate buffer
     iLen = USBHwEPRead(bEP, abBulkBuf, sizeof(abBulkBuf));
+    DBG(UART0, "**BulkOut read %d chars\n", iLen);
     for (i = 0; i < iLen; i++) {
         // put into FIFO
-        if (!fifo_put(&rxfifo, abBulkBuf[i])) {
+    	//todo: removed extra 0s from being read in. USBHwEPRead reads the entire usb
+    	//packet into abBulkBuf, not just the intended transmitted data. Is this wrong (as in does usb tell if a packet wasn't full)?
+    	//Or should I filter out the extra 0s later in the code, near where I call VCOM_getchar()
+        if (abBulkBuf[i] != 0 && !fifo_put(&rxfifo, abBulkBuf[i])) {
             // overflow... :(
             ASSERT(FALSE);
             break;
@@ -340,7 +342,7 @@ void VCOM_init(void)
   @param [in] c character to write
   @returns character written, or EOF if character could not be written
   */
-int VCOM_putchar(int c)
+int VCOM_putchar(char c)
 {
     return fifo_put(&txfifo, c) ? c : EOF;
 }
@@ -349,19 +351,20 @@ int VCOM_putchar(int c)
  * VCOM_putword
  * Writes one word to VCOM port
  */
+//todo:why does disabling and re-enabling irqs break usb? also why does this func do it?
 int VCOM_putword(int c) {
     int ret = 0;
 
-    vic_disableIRQ();
-    vic_disableFIQ();
+//    vic_disableIRQ();
+//    vic_disableFIQ();
 
     ret = fifo_putword(&txfifo,  c );
     if(!ret) {
-    	DBG(UART0, "fifo_putword fail\n");
+//    	DBG(UART0, "fifo_putword fail\n");
     }
 
-    vic_enableIRQ();
-    vic_enableFIQ();
+//    vic_enableIRQ();
+//    vic_enableFIQ();
 
     return(0);
 }
@@ -442,60 +445,44 @@ void LIS331HH_get_data_callback(i2c_master_xact_t* caller, i2c_master_xact_t* i2
 		uart0_putstring("\n***LIS331HH GET DATA FAILED***\n");
 		return;
 	}
-	//TODO: Sensor ID
-//	VCOM_putchar(ACCEL);
-	//TODO: Time stamp
-//	VCOM_putword(LIS331HH_timestamp);
-	//TODO: Sensor status register
-//	VCOM_putchar(i2c_s->i2c_rd_buffer[0]); //status register
 
-	VCOM_putchar(i2c_s->i2c_rd_buffer[1]); //x low
-	VCOM_putchar(i2c_s->i2c_rd_buffer[2]); //x high
+	imuPacket pkt;
+	fill_imu_packet(&pkt, ACCEL, LIS331HH_timestamp,
+			i2c_s->i2c_rd_buffer[0], //status register
+			(uint16_t)i2c_s->i2c_rd_buffer[1] | (uint16_t)i2c_s->i2c_rd_buffer[2] << 8, //x
+			(uint16_t)i2c_s->i2c_rd_buffer[3] | (uint16_t)i2c_s->i2c_rd_buffer[4] << 8, //y
+			(uint16_t)i2c_s->i2c_rd_buffer[5] | (uint16_t)i2c_s->i2c_rd_buffer[6] << 8, //z
+			0); //extra data
 
-	VCOM_putchar(i2c_s->i2c_rd_buffer[3]); //y low
-	VCOM_putchar(i2c_s->i2c_rd_buffer[4]); //y high
-
-	VCOM_putchar(i2c_s->i2c_rd_buffer[5]); //z low
-	VCOM_putchar(i2c_s->i2c_rd_buffer[6]); //z high
+	submit_imu_packet(&pkt, VCOM_putchar);
 }
 
 void L3G4200D_get_data_callback(i2c_master_xact_t* caller, i2c_master_xact_t* i2c_s){
 	//TODO: send xact_success failure over USB
-	//TODO: Sensor ID
-//	VCOM_putchar(GYRO);
-	//TODO: Time stamp
-//	VCOM_putword(L3G4200D_timestamp);
-	//TODO: Sensor status register
-//	VCOM_putchar(i2c_s->i2c_rd_buffer[1]); //status register
 
-	VCOM_putchar(i2c_s->i2c_rd_buffer[2]); //x low
-	VCOM_putchar(i2c_s->i2c_rd_buffer[3]); //x high
+	imuPacket pkt;
+	fill_imu_packet(&pkt, GYRO, L3G4200D_timestamp,
+			i2c_s->i2c_rd_buffer[1], //status register
+			(uint16_t)i2c_s->i2c_rd_buffer[2] | (uint16_t)i2c_s->i2c_rd_buffer[3] << 8, //x
+			(uint16_t)i2c_s->i2c_rd_buffer[4] | (uint16_t)i2c_s->i2c_rd_buffer[5] << 8, //y
+			(uint16_t)i2c_s->i2c_rd_buffer[6] | (uint16_t)i2c_s->i2c_rd_buffer[7] << 8, //z
+			i2c_s->i2c_rd_buffer[0]); //temperature data
 
-	VCOM_putchar(i2c_s->i2c_rd_buffer[4]); //y low
-	VCOM_putchar(i2c_s->i2c_rd_buffer[5]); //y high
-
-	VCOM_putchar(i2c_s->i2c_rd_buffer[6]); //z low
-	VCOM_putchar(i2c_s->i2c_rd_buffer[7]); //z high
-
-//	VCOM_putchar(i2c_s->i2c_rd_buffer[0]); //temp
+	submit_imu_packet(&pkt, VCOM_putchar);
 }
 
 void LSM303DLH_m_get_data_callback(i2c_master_xact_t* caller, i2c_master_xact_t* i2c_s){
 	//TODO: send xact_success failure over USB
-	//TODO: Sensor ID
-//	VCOM_putchar(MAG);
-	//TODO: Time stamp
-//	VCOM_putword(LSM303DLH_m_timestamp);
-	//TODO: Sensor status register?
 
-	VCOM_putchar(i2c_s->i2c_rd_buffer[0]); //x low
-	VCOM_putchar(i2c_s->i2c_rd_buffer[1]); //x high
+	imuPacket pkt;
+	fill_imu_packet(&pkt, MAG, LSM303DLH_m_timestamp,
+			0, //status register
+			(uint16_t)i2c_s->i2c_rd_buffer[0] | (uint16_t)i2c_s->i2c_rd_buffer[1] << 8, //x
+			(uint16_t)i2c_s->i2c_rd_buffer[2] | (uint16_t)i2c_s->i2c_rd_buffer[3] << 8, //y
+			(uint16_t)i2c_s->i2c_rd_buffer[4] | (uint16_t)i2c_s->i2c_rd_buffer[5] << 8, //z
+			0); //extra data
 
-	VCOM_putchar(i2c_s->i2c_rd_buffer[2]); //y low
-	VCOM_putchar(i2c_s->i2c_rd_buffer[3]); //y high
-
-	VCOM_putchar(i2c_s->i2c_rd_buffer[4]); //z low
-	VCOM_putchar(i2c_s->i2c_rd_buffer[5]); //z high
+	submit_imu_packet(&pkt, VCOM_putchar);
 }
 
 static void empty_callback(i2c_master_xact_t* caller, i2c_master_xact_t* i2c_s) {
@@ -553,9 +540,9 @@ void IMU_init(){
 	FIO0SET = ACCEL_CS | GYRO_CS;
 	FIO0CLR = ACCEL_SA0 | MAG_SA | GYRO_SA0;
 
-//	L3G4200D_init(I2C0);
+	L3G4200D_init(I2C0);
 	LIS331HH_init(I2C1);
-//	LSM303DLH_init_m(I2C2);
+	LSM303DLH_init_m(I2C2);
 
 	poll_wait(I2C0);
 	poll_wait(I2C1);
@@ -565,6 +552,7 @@ void IMU_init(){
 	RESET_TIMER0;
 	START_TIMER0;
 
+	//GPIO interrupt
     VICVectAddr17 = (unsigned int) IMU_isr; //uint?
     ENABLE_GPIO_INT;
 }
@@ -576,22 +564,33 @@ static void stream_task() {
 	int c       = 0;
 	const uint8_t LIS331HH_speed[] = {0x5F, 0x7F, 0x9F, 0xBF, 0xDF, 0x27, 0x2F, 0x37, 0x3F}; //magic numbers
 	const int LIS331HH_Hz[] = {5, 1, 2, 5, 10, 50, 100, 400, 1000};							 //casts correct spell
-	int current_speed = 4;	//A_LPWR_ODR_5
+	int current_speed = 4;	//A_LPWR_ODR_5													 //todo: turn magic into science
 	runstate_g.state = STOP;
-
-	VCOM_putword(0xfeed);
 
 	// do USB stuff in interrupt
 	while (1) {
-//		DBG(UART0, "State is: %u\n", (uint32_t) runstate_g.state);
-//	        util_wait_msecs(20);
 		switch(runstate_g.state) {
 		case GO:
+			all_led_off();
+			GREEN_LED_ON;
+//			runstate_g.state = GO;
+			break;
+		case STOP:
+			// stop getting samples
+//			IO0IntEnR &= ~(MAG_INT1 | MAG_INT1);
+			IO0IntEnR &= ~(MAG_DRDY);
+			IO0IntEnR &= ~(ACCEL_INT1);
+			IO0IntEnR &= ~(GYRO_INT2);
+			all_led_off();
+			BLUE_LED_ON;
+			break;
+		case RESET:
+			runstate_g.state = GO;
 // 			clear fifo?
 //			IO0IntEnR |= MAG_INT1 | MAG_INT1;
-//			IO0IntEnR |= MAG_DRDY;
+			IO0IntEnR |= MAG_DRDY;
 			IO0IntEnR |= ACCEL_INT1;
-//			IO0IntEnR |= GYRO_INT2;
+			IO0IntEnR |= GYRO_INT2;
 			if(L3G4200D_STUCK){
 				L3G4200D_get_data(empty_callback);
 			}
@@ -601,21 +600,6 @@ static void stream_task() {
 			if(LSM303DLH_M_STUCK){
 				LSM303DLH_m_get_data(empty_callback);
 			}
-
-			all_led_off();
-			GREEN_LED_ON;
-			runstate_g.state = GO;
-			break;
-		case STOP:
-			IO0IntClr = ACCEL_INT1;
-//			IO0IntClr = GYRO_INT2;
-//			IO0IntClr = MAG_DRDY;
-			all_led_off();
-			BLUE_LED_ON;
-			// stop getting samples
-			break;
-		case RESET:
-			runstate_g.state = GO;
 			break;
 		default:
 			DBG(UART0, "stream_task(): INVALID STATE\n");
@@ -625,38 +609,34 @@ static void stream_task() {
 		}
 
 		c = VCOM_getchar();
+		//if(runstate_g.state == GO)
+//		DBG(UART0, "free Rx fifo: %d\n", fifo_free(&rxfifo));
 		switch(c){
 		case EOF:
 			//show on console
 			break;
-
 		case 'g':
 			all_led_off();
 			GREEN_LED_ON;
 			runstate_g.state = GO;
 			DBG(UART0,"Go detected\n");
 			break;
-
 		case 's':
 			runstate_g.state = STOP;
 			DBG(UART0,"Stop detected\n");
 			break;
-
 		case 'm':
 			printf_lpc(UART0,"\nOptions: (s)-stop, (g)-go, (q)-quit\n(+)-increase sample rate, (-)-decrease sample rate\n");
 			DBG(UART0,"Menu detected\n");
 			break;
-
 		case 'q':
 			runstate_g.state = STOP;
-			DBG(UART0,"Quit detected\n")
-			break;
-
-		case 'r':
-			runstate_g.state = RESET;
 			DBG(UART0,"Quit detected\n");
 			break;
-
+		case 'r':
+			runstate_g.state = RESET;
+			DBG(UART0,"Reset detected\n");
+			break;
 		case '+':
 			if(current_speed < 8){
 				++current_speed;
@@ -664,7 +644,6 @@ static void stream_task() {
 				LIS331HH_set_ctrl_reg(1, LIS331HH_speed[current_speed]);
 			}
 			break;
-
 		case '-':
 			if(current_speed > 0){
 				--current_speed;
@@ -672,7 +651,6 @@ static void stream_task() {
 				LIS331HH_set_ctrl_reg(1, LIS331HH_speed[current_speed]);
 			}
 			break;
-
 		default:
 			if ((c == 9) || (c == 10) || (c == 13) || ((c >= 32) && (c <= 126))) {
 				if(VCOM_putchar(c) == EOF){
@@ -682,15 +660,12 @@ static void stream_task() {
 				DBG(UART0,"%c", c);
 			} else {
 				color_led_flash(5, RED_LED, FLASH_FAST ) ;
-				DBG(UART0,".");
+				if(runstate_g.state == GO)
+					DBG(UART0,".\n");
 			}
 			break;
-
-		}
-
 		}
 	}
-
 }
 
 
@@ -701,17 +676,16 @@ static void stream_task() {
 
 int main(void){
 
-    DBG(UART0,"\n***Start USB (bulk) datapath-test.***\n");
-    FIO_ENABLE;
+   // DBG(UART0,"\n***Start USB (bulk) datapath-test.***\n"); //todo: this doesn't happen becuase uart isn't init
+   // FIO_ENABLE; FIO enabled in init_color_led();
+   // volatile uint32_t* udcaHeadArray[32]; //todo: how to 128 byte align?
 
-    pllstart_seventytwomhz() ;
-
+    pllstart_seventytwomhz();
     mam_enable();
+    uart0_init_115200();
+    init_color_led();
 
-    uart0_init_115200() ;
-
-    init_color_led() ;
-
+    uart0_putstring("\n\n\n***Starting IMU test (GFE2368)***\n\n");
     DBG(UART0,"Initialising USB stack...\n");
 
     // Initialize stack
@@ -738,13 +712,17 @@ int main(void){
     // register device event handler
     USBHwRegisterDevIntHandler(USBDevIntHandler);
 
+    // turn on USB DMA
+//    USBInitializeUSBDMA(udcaHeadArray);
+    //todo:finish DMA
+
     // Initialize VCOM
     VCOM_init();
 
     DBG(UART0,"Starting USB communication\n");
 
     VICVectPriority22 = 0x01;
-    VICVectAddr22     = (int) USBIntHandler;
+    VICVectAddr22     = (unsigned int) USBIntHandler;
 
     // set up USB interrupt
     VICIntSelect      &= ~(1<<22);     // select IRQ for USB
@@ -761,12 +739,14 @@ int main(void){
 
     DBG(UART0,"USBHwConnect\n");
 
-    uart0_putstring("\n\n\n***Starting IMU test (GFE2368)***\n\n");
+
     init_color_led();
     RED_LED_ON;
 
+    DBG(UART0, "IMU_init()\n");
 	IMU_init();
 
+	DBG(UART0, "stream_task()\n");
     stream_task();
 
     return 0;

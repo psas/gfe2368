@@ -8,6 +8,8 @@
 #ifndef USB_TRANSFER_SOURCE_H_
 #define USB_TRANSFER_SOURCE_H_
 
+//todo: rethink source operation - should dispatch send the request?
+
 typedef struct usbTransferSource {
 	GSource source;
 	gboolean transfer_active;

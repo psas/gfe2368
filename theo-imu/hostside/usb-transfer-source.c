@@ -15,7 +15,7 @@
 //macro from IMU.c
 #define MAX_PACKET_SIZE 		64
 
-
+//todo: does this call a new dispatch every time it returns true, even if it hasn't been dispatched?
 static gboolean prepare(GSource *source, gint *timeout_){
 	usbTransferSource * src = (usbTransferSource*)source;
 	*timeout_ = -1;

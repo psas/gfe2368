@@ -15,27 +15,14 @@
 #include "include/imu-host.h"
 #include "include/libusb-gsource.h"
 #include "include/usb-transfer-source.h"
+#include "../include/imu-device-host-interface.h"
 
-//todo:thread safe?
+//todo: thread safe?
 //todo: handle all the errors
 //todo: better error handling
-
-
-//macros from IMU.c
-#define BULK_OUT_EP             0x05
-#define BULK_IN_EP              0x82
+//todo: handle device reset/disconnect-reconnect
 
 #define NUM_IFACES	1
-
-typedef struct imuPacket {
-	uint8_t ID;
-	uint32_t timestamp;
-	uint8_t status;
-	int16_t x;
-	int16_t y;
-	int16_t z;
-	uint8_t extra_data;
-}imuPacket;
 
 GMainLoop * edfc_main = NULL; //ugg, need better data flow
 
@@ -207,26 +194,52 @@ void bulk_in_cb(struct libusb_transfer *transfer){
 	//user data is the address of the transfer source
 	usbTransferSource * source = (usbTransferSource*)transfer->user_data;
 	imuPacket pkt;
-
+	int numPkts;
+	int pktOffset;
 	unsigned char *buff = transfer->buffer;
-	if(transfer->status == LIBUSB_TRANSFER_COMPLETED){
-	//	pkt.ID = buff[0];
-	//	pkt.timestamp = (uint32_t)buff[1]<<24 + (uint32_t)buff[2]<<16 + (uint32_t)buff[3]<<8 + (uint32_t)buff[4];
-	//	pkt.status = buff[5];
-		pkt.x = (int16_t)((uint16_t)buff[0]) | ((uint16_t)buff[1]<<8);
-		pkt.y = (int16_t)((uint16_t)buff[2]) | ((uint16_t)buff[3]<<8);
-		pkt.z = (int16_t)((uint16_t)buff[4])| ((uint16_t)buff[5]<<8);
-	//	pkt.extra_data = buff[12];
-		printf("X: %10d, Y: %10d, Z: %10d\n", pkt.x/16, pkt.y/16, pkt.z/16);
+	switch(transfer->status){
+	case LIBUSB_TRANSFER_COMPLETED:
+		for(numPkts = transfer->actual_length/IMU_PACKET_LENGTH; numPkts > 0; --numPkts){
+			//todo: fill_imu_packet
+			pktOffset = (numPkts-1)*IMU_PACKET_LENGTH;
+			pkt.ID = buff[0 + pktOffset];
+			pkt.timestamp = ((uint32_t)buff[1 + pktOffset]<<24) | ((uint32_t)buff[2 + pktOffset]<<16) | ((uint32_t)buff[3 + pktOffset]<<8) | ((uint32_t)buff[4 + pktOffset]);
+			pkt.status = buff[5 + pktOffset];
+			pkt.x = (int16_t)((uint16_t)buff[6 + pktOffset]) | ((uint16_t)buff[7 + pktOffset]<<8);
+			pkt.y = (int16_t)((uint16_t)buff[8 + pktOffset]) | ((uint16_t)buff[9 + pktOffset]<<8);
+			pkt.z = (int16_t)((uint16_t)buff[10 + pktOffset])| ((uint16_t)buff[11 + pktOffset]<<8);
+			pkt.extra_data = buff[12 + pktOffset];
+			switch(pkt.ID){
+			case ACCEL:
+				printf("ACC:");
+				break;
+			case GYRO:
+				printf("GYR:");
+				break;
+			case MAG:
+				printf("MAG:");
+				break;
+			default:
+				printf("unknown ID ");
+			}
+			printf("X: %5d, Y: %5d, Z: %5d\n", pkt.x/16, pkt.y/16, pkt.z/16);
+		}
+
+		if(transfer->actual_length > 0)
+			printf("%d----\n", transfer->actual_length);
 		source->ready_for_next_xfer = TRUE;
-	} else{
+		break;
+	case LIBUSB_TRANSFER_CANCELLED:
+		break;
+	default:
 		print_libusb_transfer_error(transfer->status, "bulk_in_cb");
 		printf("quit bulk_in\n");
 		g_main_loop_quit(edfc_main);
+		break;
 	}
 	source->transfer_active = FALSE; //todo: have this set in transfer-source.c somehow
 }
-
+//todo: why does this timeout after the first couple inputs?
 void bulk_out_cb(struct libusb_transfer *transfer){
 	//user data is the address of the transfer source
 	usbTransferSource * source = (usbTransferSource*)transfer->user_data;
@@ -291,6 +304,7 @@ gboolean read_g_stdin(GIOChannel * source, GIOCondition condition, gpointer data
 					}else{
 						printf("sending out transfer\n");
 						bulk_in->ready_for_next_xfer = FALSE; //todo:final bit of the cheap hack
+						libusb_cancel_transfer(bulk_in->transfer);
 						bulk_out->transfer->buffer[0] = in_buf[0];
 						bulk_out->ready_for_next_xfer = TRUE;
 					}
@@ -310,6 +324,7 @@ gboolean read_g_stdin(GIOChannel * source, GIOCondition condition, gpointer data
 					break;
 				case 'q':
 					printf("\nquit\n");
+					//todo: cancel active transfers on quit
 					g_main_loop_quit(edfc_main);
 					break;
 				default:

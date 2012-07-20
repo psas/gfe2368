@@ -49,7 +49,7 @@ void LSM303DLH_init_m(i2c_iface i2c_ch){
 
 	gyroinit.i2c_tx_buffer[0]  = i2c_create_write_address(LSM303DLH_ADDR_M);
     gyroinit.i2c_tx_buffer[1]  = C_CRA_REG_M | C_AUTO_INCREMENT;
-    gyroinit.i2c_tx_buffer[2]  = C_ODR_75 & C_CRA_REG_M_MASK; 	//CRA_REG_M
+    gyroinit.i2c_tx_buffer[2]  = C_ODR_7_5 & C_CRA_REG_M_MASK; 	//CRA_REG_M
     gyroinit.i2c_tx_buffer[3]  = C_RANGE_1_9 & C_CRB_REG_M_MASK; 	//CRB_REG_M
     gyroinit.i2c_tx_buffer[4]  = C_CONT_CONV & C_MR_REG_M_MASK;	//MR_REG_M
     gyroinit.write_length      = 0x5;

@@ -27,7 +27,7 @@ CPPFLAGS	= $(INCLUDE) -c $(DEBUG) -Wall -Wextra -g  -ansi -pedantic -O3
 
 ###### SOURCES  #################
 
-CSRCS		 = $(NAME).c libusb-source.c usb-transfer-source.c imu-device-host-interface.c
+CSRCS		 = $(NAME).c libusb-source.c imu-device-host-interface.c
 CPPSRCS		 =
 
 COBJS            = $(CSRCS:.c=.o)

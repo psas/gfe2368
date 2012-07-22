@@ -445,14 +445,13 @@ void LIS331HH_get_data_callback(i2c_master_xact_t* caller, i2c_master_xact_t* i2
 	}
 
 	imuPacket pkt;
-
-	pkt->ID = ACCEL;
-	pkt->timestamp = LIS331HH_timestamp;
-	pkt->status = i2c_s->i2c_rd_buffer[0];
-	pkt->x = (uint16_t)i2c_s->i2c_rd_buffer[1] | (uint16_t)i2c_s->i2c_rd_buffer[2] << 8;
-	pkt->y = (uint16_t)i2c_s->i2c_rd_buffer[3] | (uint16_t)i2c_s->i2c_rd_buffer[4] << 8;
-	pkt->z = (uint16_t)i2c_s->i2c_rd_buffer[5] | (uint16_t)i2c_s->i2c_rd_buffer[6] << 8;
-	pkt->extra_data = 0;
+	pkt.ID = ACCEL;
+	pkt.timestamp = LIS331HH_timestamp;
+	pkt.status = i2c_s->i2c_rd_buffer[0];
+	pkt.x = (uint16_t)i2c_s->i2c_rd_buffer[1] | (uint16_t)i2c_s->i2c_rd_buffer[2] << 8;
+	pkt.y = (uint16_t)i2c_s->i2c_rd_buffer[3] | (uint16_t)i2c_s->i2c_rd_buffer[4] << 8;
+	pkt.z = (uint16_t)i2c_s->i2c_rd_buffer[5] | (uint16_t)i2c_s->i2c_rd_buffer[6] << 8;
+	pkt.extra_data = 0;
 
 	submit_imu_packet(&pkt, VCOM_putchar);
 }
@@ -461,12 +460,13 @@ void L3G4200D_get_data_callback(i2c_master_xact_t* caller, i2c_master_xact_t* i2
 	//TODO: send xact_success failure over USB
 
 	imuPacket pkt;
-	fill_imu_packet(&pkt, GYRO, L3G4200D_timestamp,
-			i2c_s->i2c_rd_buffer[1], //status register
-			(uint16_t)i2c_s->i2c_rd_buffer[2] | (uint16_t)i2c_s->i2c_rd_buffer[3] << 8, //x
-			(uint16_t)i2c_s->i2c_rd_buffer[4] | (uint16_t)i2c_s->i2c_rd_buffer[5] << 8, //y
-			(uint16_t)i2c_s->i2c_rd_buffer[6] | (uint16_t)i2c_s->i2c_rd_buffer[7] << 8, //z
-			i2c_s->i2c_rd_buffer[0]); //temperature data
+	pkt.ID = GYRO;
+	pkt.timestamp = L3G4200D_timestamp;
+	pkt.status = i2c_s->i2c_rd_buffer[1];
+	pkt.x = (uint16_t)i2c_s->i2c_rd_buffer[2] | (uint16_t)i2c_s->i2c_rd_buffer[3] << 8;
+	pkt.y = (uint16_t)i2c_s->i2c_rd_buffer[4] | (uint16_t)i2c_s->i2c_rd_buffer[5] << 8;
+	pkt.z = (uint16_t)i2c_s->i2c_rd_buffer[6] | (uint16_t)i2c_s->i2c_rd_buffer[7] << 8;
+	pkt.extra_data = i2c_s->i2c_rd_buffer[0];//temperature data
 
 	submit_imu_packet(&pkt, VCOM_putchar);
 }
@@ -475,12 +475,13 @@ void LSM303DLH_m_get_data_callback(i2c_master_xact_t* caller, i2c_master_xact_t*
 	//TODO: send xact_success failure over USB
 
 	imuPacket pkt;
-	fill_imu_packet(&pkt, MAG, LSM303DLH_m_timestamp,
-			0, //status register
-			(uint16_t)i2c_s->i2c_rd_buffer[0] | (uint16_t)i2c_s->i2c_rd_buffer[1] << 8, //x
-			(uint16_t)i2c_s->i2c_rd_buffer[2] | (uint16_t)i2c_s->i2c_rd_buffer[3] << 8, //y
-			(uint16_t)i2c_s->i2c_rd_buffer[4] | (uint16_t)i2c_s->i2c_rd_buffer[5] << 8, //z
-			0); //extra data
+	pkt.ID = MAG;
+	pkt.timestamp = LSM303DLH_m_timestamp;
+	pkt.status = 0;
+	pkt.x = (uint16_t)i2c_s->i2c_rd_buffer[0] | (uint16_t)i2c_s->i2c_rd_buffer[1] << 8;
+	pkt.y = (uint16_t)i2c_s->i2c_rd_buffer[2] | (uint16_t)i2c_s->i2c_rd_buffer[3] << 8;
+	pkt.z = (uint16_t)i2c_s->i2c_rd_buffer[4] | (uint16_t)i2c_s->i2c_rd_buffer[5] << 8;
+	pkt.extra_data = 0;
 
 	submit_imu_packet(&pkt, VCOM_putchar);
 }

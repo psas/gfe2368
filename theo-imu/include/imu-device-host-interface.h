@@ -16,6 +16,7 @@
 #define GYRO	2
 #define MAG		3
 #define IMU_PACKET_LENGTH 13 //todo: sizeof(imuPacket)?
+#define MAX_PACKET_SIZE 		64
 
 typedef struct imuPacket {
 	uint8_t ID;
@@ -27,8 +28,9 @@ typedef struct imuPacket {
 	uint8_t extra_data;
 } imuPacket;
 
-void fill_imu_packet(imuPacket * pkt, uint8_t ID, uint32_t timestamp, uint8_t status,
-		int16_t x, int16_t y, int16_t z, uint8_t extra_data);
+
+void fill_imu_packet(imuPacket * pkt, unsigned char * buf);
+const char * imu_pkt_id_to_str(imuPacket * pkt);
 void submit_imu_packet(imuPacket * pkt, int (*p_putc)(char));
 
 

@@ -15,11 +15,15 @@ typedef struct usbTransferSource {
 	gboolean transfer_active;
 	gboolean ready_for_next_xfer;
 	libusb_device_handle *handle;
+	libusb_transfer_cb_fn callback;
 	struct libusb_transfer* transfer;
 } usbTransferSource;
 
 usbTransferSource * usb_transfer_source_new(libusb_device_handle *handle,
 		unsigned char endpoint, libusb_transfer_cb_fn callback);
+
+int usb_transfer_submit(usbTransferSource * source, unsigned char * buf, int buf_len);
+int usb_transfer_cancel(usbTransferSource * source);
 
 void usb_source_set_error_callback();
 

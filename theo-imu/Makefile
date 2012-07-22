@@ -6,7 +6,7 @@
 NAME            := IMU
 LIBDIR          := ..
 LPCLIBDIR       := $(LIBDIR)/liblpc23xx
-CSRCS		:= LSM303DLH.c LIS331HH.c L3G4200D.c
+CSRCS		:= LSM303DLH.c LIS331HH.c L3G4200D.c imu-device-host-interface.c
 
 INCLUDE         := -I.\
                    -I./include\

@@ -6,7 +6,7 @@ NAME		= imu-host
 CC		= gcc
 CPP		= g++
 
-LDFLAGS         = -lm -lglib-2.0 -lusb-1.0
+LDFLAGS         = -lm -lglib-2.0 -lusb-1.0 
 LDPPFLAGS       = -lm
 
 LD              = $(CC) $(LDFLAGS)
@@ -27,7 +27,7 @@ CPPFLAGS	= $(INCLUDE) -c $(DEBUG) -Wall -Wextra -g  -ansi -pedantic -O3
 
 ###### SOURCES  #################
 
-CSRCS		 = $(NAME).c libusb-source.c usb-transfer-source.c
+CSRCS		 = $(NAME).c libusb-source.c usb-transfer-source.c imu-device-host-interface.c
 CPPSRCS		 =
 
 COBJS            = $(CSRCS:.c=.o)

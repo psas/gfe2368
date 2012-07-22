@@ -7,15 +7,14 @@
 #include <libusb-1.0/libusb.h>
 #include <glib-2.0/glib.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "include/usb-transfer-source.h"
+#include "../include/imu-device-host-interface.h"
 
 //todo:error callback
+//todo: does this provide significant benefit? I dont really think so >,<
 
-//macro from IMU.c
-#define MAX_PACKET_SIZE 		64
-
-//todo: does this call a new dispatch every time it returns true, even if it hasn't been dispatched?
 static gboolean prepare(GSource *source, gint *timeout_){
 	usbTransferSource * src = (usbTransferSource*)source;
 	*timeout_ = -1;
@@ -48,6 +47,13 @@ static void finalize(GSource *g_source){
 	}
 }
 
+//inception.jpg, WE NEED TO GO DEEPER
+static void usb_transfer_source_callback(struct libusb_transfer *transfer){
+	usbTransferSource * usb_src = (usbTransferSource *)transfer->user_data;
+	usb_src->transfer_active = FALSE;
+	usb_src->callback(transfer);
+}
+
 usbTransferSource * usb_transfer_source_new(libusb_device_handle *handle,
 		unsigned char endpoint, libusb_transfer_cb_fn callback){
 
@@ -60,6 +66,7 @@ usbTransferSource * usb_transfer_source_new(libusb_device_handle *handle,
 	source->transfer = NULL;
 	source->ready_for_next_xfer = FALSE;
 	source->transfer_active = FALSE;
+	source->callback = callback;
 	//setup read data transfer
 
 	if(!(source->transfer = libusb_alloc_transfer(0))){
@@ -75,14 +82,32 @@ usbTransferSource * usb_transfer_source_new(libusb_device_handle *handle,
 							  endpoint,
 							  bulk_in_buffer,
 							  MAX_PACKET_SIZE,
-							  callback,
+							  usb_transfer_source_callback,
 							  source, //creates a pointer loop. Is this bad?
 							  5000);
 
 	return source;
 }
 
-void usb_source_set_error_callback(){
+int usb_transfer_submit(usbTransferSource * source, unsigned char * buf, int buf_len){
+	int len = buf_len < MAX_PACKET_SIZE ? buf_len : MAX_PACKET_SIZE;
+	if(source->transfer_active){
+		return -1;
+	}else{
+		if(buf)
+			memcpy(source->transfer->buffer, buf, len);
+		source->transfer->length = len;
+		source->ready_for_next_xfer = TRUE;
+	}
+	return 0;
+}
+
+int usb_transfer_cancel(usbTransferSource * source){
+	source->ready_for_next_xfer = FALSE;
+	return libusb_cancel_transfer(source->transfer);
+}
+
+void usb_transfer_source_set_error_callback(){
 	//todo:
 }
 

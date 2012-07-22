@@ -215,9 +215,7 @@ static void BulkOut(uint8_t bEP, uint8_t bEPStatus) {
     DBG(UART0, "**BulkOut read %d chars\n", iLen);
     for (i = 0; i < iLen; i++) {
         // put into FIFO
-    	//todo: removed extra 0s from being read in. USBHwEPRead reads the entire usb
-    	//packet into abBulkBuf, not just the intended transmitted data. Is this wrong (as in does usb tell if a packet wasn't full)?
-    	//Or should I filter out the extra 0s later in the code, near where I call VCOM_getchar()
+    	//todo: herpaderpaderp. Hostside sends a full packet.
         if (abBulkBuf[i] != 0 && !fifo_put(&rxfifo, abBulkBuf[i])) {
             // overflow... :(
             ASSERT(FALSE);
@@ -447,12 +445,14 @@ void LIS331HH_get_data_callback(i2c_master_xact_t* caller, i2c_master_xact_t* i2
 	}
 
 	imuPacket pkt;
-	fill_imu_packet(&pkt, ACCEL, LIS331HH_timestamp,
-			i2c_s->i2c_rd_buffer[0], //status register
-			(uint16_t)i2c_s->i2c_rd_buffer[1] | (uint16_t)i2c_s->i2c_rd_buffer[2] << 8, //x
-			(uint16_t)i2c_s->i2c_rd_buffer[3] | (uint16_t)i2c_s->i2c_rd_buffer[4] << 8, //y
-			(uint16_t)i2c_s->i2c_rd_buffer[5] | (uint16_t)i2c_s->i2c_rd_buffer[6] << 8, //z
-			0); //extra data
+
+	pkt->ID = ACCEL;
+	pkt->timestamp = LIS331HH_timestamp;
+	pkt->status = i2c_s->i2c_rd_buffer[0];
+	pkt->x = (uint16_t)i2c_s->i2c_rd_buffer[1] | (uint16_t)i2c_s->i2c_rd_buffer[2] << 8;
+	pkt->y = (uint16_t)i2c_s->i2c_rd_buffer[3] | (uint16_t)i2c_s->i2c_rd_buffer[4] << 8;
+	pkt->z = (uint16_t)i2c_s->i2c_rd_buffer[5] | (uint16_t)i2c_s->i2c_rd_buffer[6] << 8;
+	pkt->extra_data = 0;
 
 	submit_imu_packet(&pkt, VCOM_putchar);
 }

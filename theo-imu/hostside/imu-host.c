@@ -24,59 +24,10 @@
 
 #define NUM_IFACES	1
 
-GMainLoop * edfc_main = NULL; //ugg, need better data flow
+GMainLoop * edfc_main = NULL; //todo:ugg, need better data flow
 
-//todo: should the print error funcs take an enum instead of int arg?
 void print_libusb_error(int libusberrno, char* str) {
-	//todo: use libusb_error_name();
-
-	switch(libusberrno) {
-    case LIBUSB_SUCCESS:
-		fprintf(stderr, "**%s: SUCCESS\n",str);
-		break;
-    case LIBUSB_ERROR_IO:
-		fprintf(stderr, "**%s: ERROR_IO\n",str);
-		break;
-	case LIBUSB_ERROR_INVALID_PARAM:
-		fprintf(stderr, "**%s: ERROR_INVALID_PARAM\n",str);
-		break;
-	case LIBUSB_ERROR_ACCESS:
-		fprintf(stderr, "**%s: ERROR_ACCESS\n",str);
-		break;
-	case LIBUSB_ERROR_NO_DEVICE:
-		fprintf(stderr, "**%s: ERROR_NO_DEVICE\n",str);
-		break;
-	case LIBUSB_ERROR_NOT_FOUND:
-		fprintf(stderr, "**%s: ERROR_NOT_FOUND\n",str);
-		break;
-	case LIBUSB_ERROR_BUSY:
-	   fprintf(stderr, "**%s: ERROR_BUSY\n",str);
-	   break;
-    case LIBUSB_ERROR_TIMEOUT:
-		fprintf(stderr, "**%s: ERROR_TIMEOUT\n",str);
-		break;
-	case LIBUSB_ERROR_OVERFLOW:
-		fprintf(stderr, "**%s: ERROR_OVERFLOW\n",str);
-		break;
-	case LIBUSB_ERROR_PIPE:
-		fprintf(stderr, "**%s: ERROR_PIPE\n",str);
-		break;
-	case LIBUSB_ERROR_INTERRUPTED:
-		fprintf(stderr, "**%s: ERROR_INTERRUPTED\n",str);
-		break;
-	case LIBUSB_ERROR_NO_MEM:
-		fprintf(stderr, "**%s: ERROR_NO_MEM\n",str);
-		break;
-	case LIBUSB_ERROR_NOT_SUPPORTED:
-		fprintf(stderr, "**%s: ERROR_NOT_SUPPORTED\n",str);
-		break;
-	case LIBUSB_ERROR_OTHER:
-		fprintf(stderr, "**%s: ERROR_OTHER\n",str);
-		break;
-	default:
-		fprintf(stderr, "***%s:  unknown error %i ***\n", str, libusberrno);
-		break;
-    }
+	fprintf(stderr, "**%s: %s, %d\n", str, libusb_error_name(libusberrno), libusberrno);
 }
 
 void print_libusb_transfer_error(int status, char* str){
@@ -195,41 +146,22 @@ void bulk_in_cb(struct libusb_transfer *transfer){
 	usbTransferSource * source = (usbTransferSource*)transfer->user_data;
 	imuPacket pkt;
 	int numPkts;
-	int pktOffset;
-	unsigned char *buff = transfer->buffer;
+	unsigned int pktOffset;
+	unsigned char *buf = transfer->buffer;
+
 	switch(transfer->status){
 	case LIBUSB_TRANSFER_COMPLETED:
 		for(numPkts = transfer->actual_length/IMU_PACKET_LENGTH; numPkts > 0; --numPkts){
-			//todo: fill_imu_packet
 			pktOffset = (numPkts-1)*IMU_PACKET_LENGTH;
-			pkt.ID = buff[0 + pktOffset];
-			pkt.timestamp = ((uint32_t)buff[1 + pktOffset]<<24) | ((uint32_t)buff[2 + pktOffset]<<16) | ((uint32_t)buff[3 + pktOffset]<<8) | ((uint32_t)buff[4 + pktOffset]);
-			pkt.status = buff[5 + pktOffset];
-			pkt.x = (int16_t)((uint16_t)buff[6 + pktOffset]) | ((uint16_t)buff[7 + pktOffset]<<8);
-			pkt.y = (int16_t)((uint16_t)buff[8 + pktOffset]) | ((uint16_t)buff[9 + pktOffset]<<8);
-			pkt.z = (int16_t)((uint16_t)buff[10 + pktOffset])| ((uint16_t)buff[11 + pktOffset]<<8);
-			pkt.extra_data = buff[12 + pktOffset];
-			switch(pkt.ID){
-			case ACCEL:
-				printf("ACC:");
-				break;
-			case GYRO:
-				printf("GYR:");
-				break;
-			case MAG:
-				printf("MAG:");
-				break;
-			default:
-				printf("unknown ID ");
-			}
-			printf("X: %5d, Y: %5d, Z: %5d\n", pkt.x/16, pkt.y/16, pkt.z/16);
+			fill_imu_packet(&pkt, buf+pktOffset);
+			printf("%s: X: %5d, Y: %5d, Z: %5d\n",
+					imu_pkt_id_to_str(&pkt),
+					pkt.x/16, pkt.y/16, pkt.z/16);
 		}
-
-		if(transfer->actual_length > 0)
-			printf("%d----\n", transfer->actual_length);
 		source->ready_for_next_xfer = TRUE;
 		break;
 	case LIBUSB_TRANSFER_CANCELLED:
+		//do nothing.
 		break;
 	default:
 		print_libusb_transfer_error(transfer->status, "bulk_in_cb");
@@ -237,32 +169,24 @@ void bulk_in_cb(struct libusb_transfer *transfer){
 		g_main_loop_quit(edfc_main);
 		break;
 	}
-	source->transfer_active = FALSE; //todo: have this set in transfer-source.c somehow
 }
-//todo: why does this timeout after the first couple inputs?
+
 void bulk_out_cb(struct libusb_transfer *transfer){
-	//user data is the address of the transfer source
-	usbTransferSource * source = (usbTransferSource*)transfer->user_data;
-	if(transfer->status == LIBUSB_TRANSFER_COMPLETED){
-		printf("bulk_out_completed\n");
-	}else{
+	if(transfer->status != LIBUSB_TRANSFER_COMPLETED){
 		print_libusb_transfer_error(transfer->status, "bulk_in_cb");
 		printf("quit bulk_out\n");
 		g_main_loop_quit(edfc_main);
 	}
-	source->transfer_active = FALSE; //todo: have this set in transfer-source.c somehow
 }
 
 gboolean read_g_stdin(GIOChannel * source, GIOCondition condition, gpointer data){
-
 	usbTransferSource ** bulkIO = (usbTransferSource **)data;
 	usbTransferSource * bulk_out = bulkIO[1];
-	usbTransferSource * bulk_in = bulkIO[0]; //todo:more cheap hack
-	gchar * in_buf = NULL;
+	usbTransferSource * bulk_in = bulkIO[0];
+	unsigned char * in_buf = NULL;
 	gsize bytes_read = 0;
 	gsize terminator_pos = 0;
 	GError * error = NULL;
-//	int usbErr=0;
 	printf("read_g_stdin callback\n");
 
 	if(condition & ~(G_IO_IN | G_IO_ERR | G_IO_HUP)){
@@ -279,52 +203,40 @@ gboolean read_g_stdin(GIOChannel * source, GIOCondition condition, gpointer data
 		return FALSE;
 	}
 	if(condition & G_IO_IN){
-		g_io_channel_read_line(source, &in_buf, &bytes_read, &terminator_pos, &error);
+		g_io_channel_read_line(source, (gchar**)&in_buf, &bytes_read, &terminator_pos, &error);
 		if(bytes_read > 0){ //todo: handle series of chars?
 			switch(in_buf[0]){
-				//todo:case 'm':
-
+				case 'm':
+					printf("(r)-Reset, (s)-Stop, (q)-Quit\n");
+					break;
 				case '+':
 				case '-':
 					printf("input: %c\n", in_buf[0]);
-					//todo: turn this into a usb-transfer-source func?
-					if(bulk_out->transfer_active){
+					if(usb_transfer_submit(bulk_out, in_buf, 1))
 						printf("last char transfer not yet submitted\n");
-					}else{
-						printf("sending out transfer\n");
-						bulk_out->transfer->buffer[0] = in_buf[0];
-						bulk_out->ready_for_next_xfer = TRUE;
-					}
 					break;
 				case 's':
 					printf("input: %c\n", in_buf[0]);
-					//todo: turn this into a usb-transfer-source func?
-					if(bulk_out->transfer_active){
+					if(usb_transfer_submit(bulk_out, in_buf, 1)){
 						printf("last char transfer not yet submitted\n");
 					}else{
-						printf("sending out transfer\n");
-						bulk_in->ready_for_next_xfer = FALSE; //todo:final bit of the cheap hack
-						libusb_cancel_transfer(bulk_in->transfer);
-						bulk_out->transfer->buffer[0] = in_buf[0];
-						bulk_out->ready_for_next_xfer = TRUE;
+						usb_transfer_cancel(bulk_in);
 					}
 					break;
 				case 'r':
 				case 'g':
 					printf("input: %c\n", in_buf[0]);
-					//todo: turn this into a usb-transfer-source func?
-					if(bulk_out->transfer_active){
+					if(usb_transfer_submit(bulk_out, in_buf, 1)){
 						printf("last char transfer not yet submitted\n");
 					}else{
-						printf("sending out transfer\n");
-						bulk_in->ready_for_next_xfer = TRUE; //todo:final bit of the cheap hack
-						bulk_out->transfer->buffer[0] = in_buf[0];
-						bulk_out->ready_for_next_xfer = TRUE;
+						usb_transfer_submit(bulk_in, NULL, MAX_PACKET_SIZE);
 					}
 					break;
 				case 'q':
 					printf("\nquit\n");
-					//todo: cancel active transfers on quit
+					//todo: send s to IMU?
+					usb_transfer_cancel(bulk_in);
+					usb_transfer_cancel(bulk_out);
 					g_main_loop_quit(edfc_main);
 					break;
 				default:
@@ -355,7 +267,7 @@ int main(){
 	libusbSource * usb_source = NULL;
 	usbTransferSource * bulk_in = NULL;
 	usbTransferSource * bulk_out = NULL;
-	usbTransferSource * bulkIO[2]; //cheap hack
+	usbTransferSource * bulkIO[2];
 
 	GMainContext * edfc_context = NULL;
 	GIOChannel * g_stdin = NULL;
@@ -379,9 +291,7 @@ int main(){
 //	g_source_set_callback((GSource*) usb_source, (GSourceFunc)libusb_mainloop_error_cb, &edfc_main, NULL);
 
 	bulk_in = usb_transfer_source_new(imu_handle, BULK_IN_EP, bulk_in_cb);
-	//bulk_in->ready_for_next_xfer=TRUE;
 	bulk_out = usb_transfer_source_new(imu_handle, BULK_OUT_EP, bulk_out_cb);
-	//todo: I set bulk_out->ready_for_next_xfer=TRUE here and it broke everything. figure out why.
 
 	edfc_context = g_main_context_new(); //edfc == event driven flight computer
 	edfc_main = g_main_loop_new(edfc_context, FALSE);
@@ -395,7 +305,7 @@ int main(){
 	g_source_attach((GSource*) bulk_out, edfc_context);
 	gs_stdin = g_io_create_watch(g_stdin, G_IO_IN | G_IO_ERR | G_IO_HUP);
 	bulkIO[0] = bulk_in;
-	bulkIO[1] = bulk_out; //todo: continuation of cheap hack
+	bulkIO[1] = bulk_out;
 	g_source_set_callback(gs_stdin, (GSourceFunc)read_g_stdin, bulkIO, NULL);
 	g_source_attach(gs_stdin, edfc_context);
 

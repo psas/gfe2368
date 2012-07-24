@@ -48,13 +48,23 @@ void submit_imu_packet(imuPacket * pkt, int (*p_putc)(char)){
     p_putc(pkt->extra_data);
 }
 
+void copy_imu_packet(imuPacket * destination, imuPacket * source){
+	destination->ID         = source->ID;
+	destination->timestamp  = source->timestamp;
+	destination->status     = source->status;
+	destination->x          = source->x;
+	destination->y          = source->y;
+	destination->z          = source->z;
+	destination->extra_data = source->extra_data;
+}
+
 const char * imu_pkt_id_to_str(imuPacket * pkt){
 	switch(pkt->ID){
-	case ACCEL:
+	case ADDR_ACC:
 		return "ACC";
-	case GYRO:
+	case ADDR_GYR:
 		return "GYR";
-	case MAG:
+	case ADDR_MAG:
 		return "MAG";
 	default:
 		return "unknown ID";

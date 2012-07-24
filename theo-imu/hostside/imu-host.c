@@ -137,6 +137,8 @@ libusb_device_handle * open_usb_device_handle(libusb_context * context,
 				return NULL;
 			}
 		}
+	}else{
+		fprintf(stderr, "Device not found\n");
 	}
 	libusb_free_device_list(list, 1);
 	return handle;
@@ -144,6 +146,10 @@ libusb_device_handle * open_usb_device_handle(libusb_context * context,
 
 void bulk_in_cb(struct libusb_transfer *transfer){
 	imuPacket pkt;
+	imuPacket acc;
+	imuPacket gyr;
+	imuPacket mag;
+
 	int numPkts;
 	unsigned int pktOffset;
 	unsigned char *buf = transfer->buffer;
@@ -151,13 +157,37 @@ void bulk_in_cb(struct libusb_transfer *transfer){
 
 	switch(transfer->status){
 	case LIBUSB_TRANSFER_COMPLETED:
+		acc.ID = 0;
+		gyr.ID = 0;
+		mag.ID = 0;
 		for(numPkts = transfer->actual_length/IMU_PACKET_LENGTH; numPkts > 0; --numPkts){
 			pktOffset = (numPkts-1)*IMU_PACKET_LENGTH;
 			fill_imu_packet(&pkt, buf+pktOffset);
-			printf("%s: X: %5d, Y: %5d, Z: %5d\n",
-					imu_pkt_id_to_str(&pkt),
-					pkt.x/16, pkt.y/16, pkt.z/16);
+			switch(pkt.ID){
+			case ADDR_ACC:
+				copy_imu_packet(&acc, &pkt);
+				break;
+			case ADDR_GYR:
+				copy_imu_packet(&gyr, &pkt);
+				break;
+			case ADDR_MAG:
+				copy_imu_packet(&mag, &pkt);
+				break;
+			}
 		}
+		if(acc.ID)
+			printf(" ACC X%5d Y%5d Z%5d", acc.x/16, acc.y/16, acc.z/16);
+		else
+			printf("                         ");
+		if(gyr.ID)
+			printf(" GYR X%5d Y%5d Z%5d", gyr.x/16, gyr.y/16, gyr.z/16);
+		else
+			printf("                         ");
+		if(mag.ID)
+			printf(" MAG X%5d Y%5d Z%5d", mag.x/16, mag.y/16, mag.z/16);
+		else
+			printf("                         ");
+		printf("\n");
 		retErr = libusb_submit_transfer(transfer);
 		break;
 	case LIBUSB_TRANSFER_CANCELLED:
@@ -173,7 +203,7 @@ void bulk_in_cb(struct libusb_transfer *transfer){
 
 void bulk_out_cb(struct libusb_transfer *transfer){
 	if(transfer->status != LIBUSB_TRANSFER_COMPLETED){
-		print_libusb_transfer_error(transfer->status, "bulk_in_cb");
+		print_libusb_transfer_error(transfer->status, "bulk_out_cb");
 		printf("quit bulk_out\n");
 		g_main_loop_quit(edfc_main);
 	}
@@ -187,7 +217,6 @@ gboolean read_g_stdin(GIOChannel * source, GIOCondition condition, gpointer data
 	gsize bytes_read = 0;
 	gsize terminator_pos = 0;
 	GError * error = NULL;
-	printf("read_g_stdin callback\n");
 
 	if(condition & ~(G_IO_IN | G_IO_ERR | G_IO_HUP)){
 		printf("**Unknown GIOCondition\n");
@@ -209,17 +238,68 @@ gboolean read_g_stdin(GIOChannel * source, GIOCondition condition, gpointer data
 	if(bytes_read > 0){ //todo: handle series of chars?
 		printf("input: %c\n", in_buf[0]);
 		bulk_out->length=1;
-		bulk_out->buffer[0] = in_buf[0];
 		switch(in_buf[0]){
 		case 'm':
-			printf("(r)-Reset, (s)-Stop, (q)-Quit\n");
+			printf("(r)-Reset, (s)-Stop, (q)-Quit, (g)-Turn IMU light green\n\
+					(+[a,g,m])-Increase sample speed [of accel, gyro, or mag]\n\
+					(-[a,g,m])-Decrease sample speed [of accel, gyro, or mag]\n");
 			break;
 		case '+':
+			switch(in_buf[1]){
+			case '\n':
+				bulk_out->buffer[0] = ADDR_ALL | INST_INC_SPEED;
+				if(libusb_submit_transfer(bulk_out))
+					printf("last char transfer not yet submitted\n");
+				break;
+			case 'a':
+				bulk_out->buffer[0] = ADDR_ACC | INST_INC_SPEED;
+				if(libusb_submit_transfer(bulk_out))
+					printf("last char transfer not yet submitted\n");
+				break;
+			case 'g':
+				bulk_out->buffer[0] = ADDR_GYR | INST_INC_SPEED;
+				if(libusb_submit_transfer(bulk_out))
+					printf("last char transfer not yet submitted\n");
+				break;
+			case 'm':
+				bulk_out->buffer[0] = ADDR_MAG | INST_INC_SPEED;
+				if(libusb_submit_transfer(bulk_out))
+					printf("last char transfer not yet submitted\n");
+				break;
+			default:
+				fprintf(stderr, "**Unknown sensor %c\n", in_buf[1]);
+				break;
+			}
+			break;
 		case '-':
-			if(libusb_submit_transfer(bulk_out)) //todo: handle errors better
-				printf("last char transfer not yet submitted\n");
+			switch(in_buf[1]){
+			case '\n':
+				bulk_out->buffer[0] = ADDR_ALL | INST_DEC_SPEED;
+				if(libusb_submit_transfer(bulk_out))
+					printf("last char transfer not yet submitted\n");
+				break;
+			case 'a':
+				bulk_out->buffer[0] = ADDR_ACC | INST_DEC_SPEED;
+				if(libusb_submit_transfer(bulk_out))
+					printf("last char transfer not yet submitted\n");
+				break;
+			case 'g':
+				bulk_out->buffer[0] = ADDR_GYR | INST_DEC_SPEED;
+				if(libusb_submit_transfer(bulk_out))
+					printf("last char transfer not yet submitted\n");
+				break;
+			case 'm':
+				bulk_out->buffer[0] = ADDR_MAG | INST_DEC_SPEED;
+				if(libusb_submit_transfer(bulk_out))
+					printf("last char transfer not yet submitted\n");
+				break;
+			default:
+				fprintf(stderr, "**Unknown sensor %c\n", in_buf[1]);
+				break;
+			}
 			break;
 		case 's':
+			bulk_out->buffer[0] = ADDR_ALL | INST_STOP;
 			if(libusb_submit_transfer(bulk_out)){
 				printf("last char transfer not yet submitted\n");
 			}else{
@@ -227,16 +307,22 @@ gboolean read_g_stdin(GIOChannel * source, GIOCondition condition, gpointer data
 			}
 			break;
 		case 'r':
-		case 'g':
+			bulk_out->buffer[0] = ADDR_ALL | INST_RESET;
 			if(libusb_submit_transfer(bulk_out)){
 				printf("last char transfer not yet submitted\n");
 			}else{
 				libusb_submit_transfer(bulk_in);
 			}
 			break;
+		case 'g':
+			bulk_out->buffer[0] = ADDR_ALL | INST_GO;
+			if(libusb_submit_transfer(bulk_out)){
+				printf("last char transfer not yet submitted\n");
+			}
+			break;
 		case 'q':
 			printf("\nquit\n");
-			//todo: send s to IMU?
+			//todo: send stop to IMU?
 			libusb_cancel_transfer(bulk_in);
 			libusb_cancel_transfer(bulk_out);
 			g_main_loop_quit(edfc_main);
@@ -271,7 +357,6 @@ int main(){
 	struct libusb_transfer * bulk_out = NULL;//bulkIO[1];
 	unsigned char * bulk_in_buffer = NULL;
 	unsigned char * bulk_out_buffer = NULL;
-
 
 	GMainContext * edfc_context = NULL;
 	GIOChannel * g_stdin = NULL;

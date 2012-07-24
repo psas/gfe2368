@@ -10,6 +10,7 @@
 
 void LSM303DLH_m_get_data(XACT_FnCallback*);
 void LSM303DLH_init_m(i2c_iface i2c_ch);
+int LSM303DLH_m_set_ctrl_reg(int, uint8_t);
 
 
 #define LSM303DLH_ADDR_A	(0x19) //will need to coordinate this with LIS331HH

@@ -58,3 +58,30 @@ void LSM303DLH_init_m(i2c_iface i2c_ch){
     start_i2c_master_xact(i2c_channel, &gyroinit, &empty_callback);
 }
 
+int LSM303DLH_m_set_ctrl_reg(int reg, uint8_t val){
+	i2c_master_xact_t mag;
+	uint8_t reg_addr;
+	switch(reg){
+	case 1:
+		reg_addr = C_CRA_REG_M;
+		break;
+	case 2:
+		reg_addr = C_CRB_REG_M;
+		break;
+	case 3:
+		reg_addr = C_MR_REG_M;
+		break;
+	default:
+		return 0;
+	}
+
+
+	mag.i2c_tx_buffer[0] = i2c_create_write_address(LSM303DLH_ADDR_M);
+	mag.i2c_tx_buffer[1] = reg_addr;
+	mag.i2c_tx_buffer[2] = val;
+	mag.write_length     = 0x3;
+
+	start_i2c_master_xact(i2c_channel, &mag, empty_callback);
+	return 1;
+}
+

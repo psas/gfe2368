@@ -13,7 +13,7 @@ void L3G4200D_init(i2c_iface i2c_ch);
 void L3G4200D_get_data(XACT_FnCallback* xact_callback);
 int L3G4200D_data_overrun(uint8_t status_reg);
 int L3G4200D_data_available(uint8_t status_reg);
-
+int L3G4200D_set_ctrl_reg(int, uint8_t);
 
 #define L3G4200D_ADDR	(0x68)
 
@@ -56,6 +56,7 @@ int L3G4200D_data_available(uint8_t status_reg);
 #define G_CTRL_REG5_DEFAULT	(0x00)
 
 /* CTRL_REG1 data */
+#define G_PWR_DOWN          (0x00)
 #define G_ODR_100			(0x00)
 #define G_ODR_200			(0x40)
 #define G_ODR_400			(0x80)

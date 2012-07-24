@@ -14,7 +14,7 @@ void LIS331HH_init(i2c_iface);
 void LIS331HH_get_data(XACT_FnCallback* xact_fn) ;
 int LIS331HH_data_overrun(uint8_t status_reg);
 int LIS331HH_data_available(uint8_t status_reg);
-int LIS331HH_set_ctrl_reg(int, uint8_t);
+int LIS331HH_set_ctrl_reg(int, uint8_t); //todo: take a reg addr argument?
 
 #define LIS331HH_ADDR			(0x18)
 

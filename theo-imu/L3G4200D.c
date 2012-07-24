@@ -68,3 +68,36 @@ int L3G4200D_data_overrun(uint8_t status_reg){
 int L3G4200D_data_available(uint8_t status_reg){
 	return ((status_reg & G_ZYXDA) == G_ZYXDA);
 }
+
+int L3G4200D_set_ctrl_reg(int reg, uint8_t val){
+	i2c_master_xact_t gyro;
+	uint8_t reg_addr;
+	switch(reg){
+	case 1:
+		reg_addr = G_CTRL_REG1;
+		break;
+	case 2:
+		reg_addr = G_CTRL_REG2;
+		break;
+	case 3:
+		reg_addr = G_CTRL_REG3;
+		break;
+	case 4:
+		reg_addr = G_CTRL_REG4;
+		break;
+	case 5:
+		reg_addr = G_CTRL_REG5;
+		break;
+	default:
+		return 0;
+	}
+
+
+	gyro.i2c_tx_buffer[0] = i2c_create_write_address(L3G4200D_ADDR);
+	gyro.i2c_tx_buffer[1] = reg_addr;
+	gyro.i2c_tx_buffer[2] = val;
+	gyro.write_length     = 0x3;
+
+	start_i2c_master_xact(i2c_channel, &gyro, empty_callback);
+	return 1;
+}

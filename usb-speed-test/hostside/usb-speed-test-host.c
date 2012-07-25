@@ -1,4 +1,11 @@
 /*
+ * usb-speed-test-host.c
+ *
+ *  Created on: Jul 24, 2012
+ *      Author: theo
+ */
+
+/*
  * imu-host.c
  *
  *  Created on: Jun 9, 2012
@@ -12,7 +19,7 @@
 #include <time.h>
 #include <poll.h>
 
-#include "include/imu-host.h"
+#include "include/usb-speed-test-host.h"
 #include "include/libusb-gsource.h"
 #include "../include/imu-device-host-interface.h"
 
@@ -28,53 +35,7 @@
 GMainLoop * edfc_main = NULL; //todo:ugg, need better data flow
 
 void print_libusb_error(int libusberrno, char* str) {
-	switch(libusberrno) {
-    case LIBUSB_SUCCESS:
-		fprintf(stderr, "**%s: SUCCESS\n",str);
-		break;
-    case LIBUSB_ERROR_IO:
-		fprintf(stderr, "**%s: ERROR_IO\n",str);
-		break;
-	case LIBUSB_ERROR_INVALID_PARAM:
-		fprintf(stderr, "**%s: ERROR_INVALID_PARAM\n",str);
-		break;
-	case LIBUSB_ERROR_ACCESS:
-		fprintf(stderr, "**%s: ERROR_ACCESS\n",str);
-		break;
-	case LIBUSB_ERROR_NO_DEVICE:
-		fprintf(stderr, "**%s: ERROR_NO_DEVICE\n",str);
-		break;
-	case LIBUSB_ERROR_NOT_FOUND:
-		fprintf(stderr, "**%s: ERROR_NOT_FOUND\n",str);
-		break;
-	case LIBUSB_ERROR_BUSY:
-	   fprintf(stderr, "**%s: ERROR_BUSY\n",str);
-	   break;
-    case LIBUSB_ERROR_TIMEOUT:
-		fprintf(stderr, "**%s: ERROR_TIMEOUT\n",str);
-		break;
-	case LIBUSB_ERROR_OVERFLOW:
-		fprintf(stderr, "**%s: ERROR_OVERFLOW\n",str);
-		break;
-	case LIBUSB_ERROR_PIPE:
-		fprintf(stderr, "**%s: ERROR_PIPE\n",str);
-		break;
-	case LIBUSB_ERROR_INTERRUPTED:
-		fprintf(stderr, "**%s: ERROR_INTERRUPTED\n",str);
-		break;
-	case LIBUSB_ERROR_NO_MEM:
-		fprintf(stderr, "**%s: ERROR_NO_MEM\n",str);
-		break;
-	case LIBUSB_ERROR_NOT_SUPPORTED:
-		fprintf(stderr, "**%s: ERROR_NOT_SUPPORTED\n",str);
-		break;
-	case LIBUSB_ERROR_OTHER:
-		fprintf(stderr, "**%s: ERROR_OTHER\n",str);
-		break;
-	default:
-		fprintf(stderr, "***%s:  unknown error %i ***\n", str, libusberrno);
-		break;
-    }
+	fprintf(stderr, "**%s: %d\n", str, libusberrno);
 //	fprintf(stderr, "**%s: %s, %d\n", str, libusb_error_name(libusberrno), libusberrno);
 }
 
@@ -192,49 +153,17 @@ libusb_device_handle * open_usb_device_handle(libusb_context * context,
 }
 
 void bulk_in_cb(struct libusb_transfer *transfer){
-	imuPacket pkt;
-	imuPacket acc;
-	imuPacket gyr;
-	imuPacket mag;
 
-	int numPkts;
-	unsigned int pktOffset;
 	unsigned char *buf = transfer->buffer;
 	int retErr;
 
 	switch(transfer->status){
 	case LIBUSB_TRANSFER_COMPLETED:
-		acc.ID = 0;
-		gyr.ID = 0;
-		mag.ID = 0;
-		for(numPkts = transfer->actual_length/IMU_PACKET_LENGTH; numPkts > 0; --numPkts){
-			pktOffset = (numPkts-1)*IMU_PACKET_LENGTH;
-			fill_imu_packet(&pkt, buf+pktOffset);
-			switch(pkt.ID){
-			case ADDR_ACC:
-				copy_imu_packet(&acc, &pkt);
-				break;
-			case ADDR_GYR:
-				copy_imu_packet(&gyr, &pkt);
-				break;
-			case ADDR_MAG:
-				copy_imu_packet(&mag, &pkt);
-				break;
-			}
-		}
-		if(acc.ID)
-			printf(" ACC X%5d Y%5d Z%5d", acc.x/16, acc.y/16, acc.z/16);
+
+		if(buf[0] == 'A')
+			fprintf(stdout, "SIGNAL RECEIVED\n");
 		else
-			printf("                         ");
-		if(gyr.ID)
-			printf(" GYR X%5d Y%5d Z%5d", gyr.x/16, gyr.y/16, gyr.z/16);
-		else
-			printf("                         ");
-		if(mag.ID)
-			printf(" MAG X%5d Y%5d Z%5d", mag.x/16, mag.y/16, mag.z/16);
-		else
-			printf("                         ");
-		printf("\n");
+			fprintf(stdout, "UNEXPECTED SIGNAL\n");
 		retErr = libusb_submit_transfer(transfer);
 		break;
 	case LIBUSB_TRANSFER_CANCELLED:
@@ -286,87 +215,16 @@ gboolean read_g_stdin(GIOChannel * source, GIOCondition condition, gpointer data
 		printf("input: %c\n", in_buf[0]);
 		bulk_out->length=1;
 		switch(in_buf[0]){
-		case 'm':
-			printf("(r)-Reset, (s)-Stop, (q)-Quit, (m)-Menu (g)-Turn IMU light green\n\
-					(+[a,g,m])-Increase sample speed [of accel, gyro, or mag]\n\
-					(-[a,g,m])-Decrease sample speed [of accel, gyro, or mag]\n");
-			break;
-		case '+':
-			switch(in_buf[1]){
-			case '\n':
-				bulk_out->buffer[0] = ADDR_ALL | INST_INC_SPEED;
-				if(libusb_submit_transfer(bulk_out))
-					printf("last char transfer not yet submitted\n");
-				break;
-			case 'a':
-				bulk_out->buffer[0] = ADDR_ACC | INST_INC_SPEED;
-				if(libusb_submit_transfer(bulk_out))
-					printf("last char transfer not yet submitted\n");
-				break;
-			case 'g':
-				bulk_out->buffer[0] = ADDR_GYR | INST_INC_SPEED;
-				if(libusb_submit_transfer(bulk_out))
-					printf("last char transfer not yet submitted\n");
-				break;
-			case 'm':
-				bulk_out->buffer[0] = ADDR_MAG | INST_INC_SPEED;
-				if(libusb_submit_transfer(bulk_out))
-					printf("last char transfer not yet submitted\n");
-				break;
-			default:
-				fprintf(stderr, "**Unknown sensor %c\n", in_buf[1]);
-				break;
-			}
-			break;
-		case '-':
-			switch(in_buf[1]){
-			case '\n':
-				bulk_out->buffer[0] = ADDR_ALL | INST_DEC_SPEED;
-				if(libusb_submit_transfer(bulk_out))
-					printf("last char transfer not yet submitted\n");
-				break;
-			case 'a':
-				bulk_out->buffer[0] = ADDR_ACC | INST_DEC_SPEED;
-				if(libusb_submit_transfer(bulk_out))
-					printf("last char transfer not yet submitted\n");
-				break;
-			case 'g':
-				bulk_out->buffer[0] = ADDR_GYR | INST_DEC_SPEED;
-				if(libusb_submit_transfer(bulk_out))
-					printf("last char transfer not yet submitted\n");
-				break;
-			case 'm':
-				bulk_out->buffer[0] = ADDR_MAG | INST_DEC_SPEED;
-				if(libusb_submit_transfer(bulk_out))
-					printf("last char transfer not yet submitted\n");
-				break;
-			default:
-				fprintf(stderr, "**Unknown sensor %c\n", in_buf[1]);
-				break;
-			}
-			break;
-		case 's':
-			bulk_out->buffer[0] = ADDR_ALL | INST_STOP;
-			if(libusb_submit_transfer(bulk_out)){
-				printf("last char transfer not yet submitted\n");
-			}else{
-				libusb_cancel_transfer(bulk_in);
-			}
-			break;
-		case 'r':
-			bulk_out->buffer[0] = ADDR_ALL | INST_RESET;
-			if(libusb_submit_transfer(bulk_out)){
-				printf("last char transfer not yet submitted\n");
-			}else{
-				libusb_submit_transfer(bulk_in);
-			}
-			break;
 		case 'g':
-			bulk_out->buffer[0] = ADDR_ALL | INST_GO;
-			if(libusb_submit_transfer(bulk_out)){
-				printf("last char transfer not yet submitted\n");
-			}
+			libusb_submit_transfer(bulk_in);
 			break;
+
+		case 'B':
+			bulk_out->buffer[0] = 'B';
+			if(libusb_submit_transfer(bulk_out))
+				printf("last char transfer not yet submitted\n");
+			break;
+
 		case 'q':
 			printf("\nquit\n");
 			//todo: send stop to IMU?
@@ -437,7 +295,7 @@ int main(){
 							  MAX_PACKET_SIZE,
 							  bulk_in_cb,
 							  NULL,
-							  5000);
+							  0);
 	libusb_fill_bulk_transfer(bulk_out,
 							  imu_handle,
 							  BULK_OUT_EP,
@@ -445,7 +303,7 @@ int main(){
 							  MAX_PACKET_SIZE,
 							  bulk_out_cb,
 							  NULL,
-							  5000);
+							  0);
 	bulkIO[0] = bulk_in;
 	bulkIO[1] = bulk_out;
 
@@ -485,3 +343,4 @@ int main(){
 
 	exit(EXIT_SUCCESS);
 }
+

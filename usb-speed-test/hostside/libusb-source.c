@@ -78,7 +78,7 @@ static gboolean dispatch(GSource *g_source, GSourceFunc callback, gpointer user_
 		return TRUE;
 	}
 
-	usb_src->handle_events_error = libusb_handle_events_timeout(usb_src->context, &nonblocking);
+	usb_src->handle_events_error = libusb_handle_events_timeout_completed(usb_src->context, &nonblocking, NULL);
 	if(usb_src->handle_events_error && errCB != NULL)
 		errCB(0, usb_src->handle_events_error, loop);
     return TRUE;

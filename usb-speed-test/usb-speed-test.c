@@ -1,3 +1,11 @@
+/*
+ * usb-speed-test.c
+ *
+ *  Created on: Jul 24, 2012
+ *      Author: theo
+ */
+
+
 
 /*
  * datapath-test.c
@@ -5,7 +13,7 @@
  * Test the datapath from a sensor to
  * the LPC to USB to the FC and from the FC
  * to the LPC.
- * 
+ *
  */
 
 //#define DEBUG_USB
@@ -35,10 +43,8 @@
 
 #include "gfe2368-util.h"
 
-#include "IMU.h"
-#include "L3G4200D.h"
-#include "LIS331HH.h"
-#include "LSM303DLH.h"
+#include "usb-speed-test.h"
+
 #include "imu-device-host-interface.h"
 
 
@@ -71,9 +77,6 @@ struct {
    runstate_type state;
 } runstate_g;
 
-static uint32_t L3G4200D_timestamp;
-static uint32_t LIS331HH_timestamp;
-static uint32_t LSM303DLH_m_timestamp;
 
 
 static const uint8_t abDescriptors[] = {
@@ -414,138 +417,35 @@ static void USBDevIntHandler(uint8_t bDevStatus)
     }
 }
 
-static void poll_wait(i2c_iface i2c_ch) {
-	switch(i2c_ch){
-    case I2C0:
-    	while(is_binsem_locked(&i2c0_binsem_g)== 1);
-    	break;
-    case I2C1:
-    	while(is_binsem_locked(&i2c1_binsem_g)== 1);
-    	break;
-    case I2C2:
-    	while(is_binsem_locked(&i2c2_binsem_g)== 1);
-    	break;
-     }
-}
-
-void LIS331HH_get_data_callback(i2c_master_xact_t* caller, i2c_master_xact_t* i2c_s){
-	//TODO: send xact_success failure over USB
-	if(!(i2c_s->xact_success)){
-		uart0_putstring("\n***LIS331HH GET DATA FAILED***\n");
-		return;
-	}
-
-	imuPacket pkt;
-	pkt.ID = ADDR_ACC;
-	pkt.timestamp = LIS331HH_timestamp;
-	pkt.status = i2c_s->i2c_rd_buffer[0];
-	pkt.x = (uint16_t)i2c_s->i2c_rd_buffer[1] | (uint16_t)i2c_s->i2c_rd_buffer[2] << 8;
-	pkt.y = (uint16_t)i2c_s->i2c_rd_buffer[3] | (uint16_t)i2c_s->i2c_rd_buffer[4] << 8;
-	pkt.z = (uint16_t)i2c_s->i2c_rd_buffer[5] | (uint16_t)i2c_s->i2c_rd_buffer[6] << 8;
-	pkt.extra_data = 0;
-
-	submit_imu_packet(&pkt, VCOM_putchar);
-}
-
-void L3G4200D_get_data_callback(i2c_master_xact_t* caller, i2c_master_xact_t* i2c_s){
-	//TODO: send xact_success failure over USB
-
-	imuPacket pkt;
-	pkt.ID = ADDR_GYR;
-	pkt.timestamp = L3G4200D_timestamp;
-	pkt.status = i2c_s->i2c_rd_buffer[1];
-	pkt.x = (uint16_t)i2c_s->i2c_rd_buffer[2] | (uint16_t)i2c_s->i2c_rd_buffer[3] << 8;
-	pkt.y = (uint16_t)i2c_s->i2c_rd_buffer[4] | (uint16_t)i2c_s->i2c_rd_buffer[5] << 8;
-	pkt.z = (uint16_t)i2c_s->i2c_rd_buffer[6] | (uint16_t)i2c_s->i2c_rd_buffer[7] << 8;
-	pkt.extra_data = i2c_s->i2c_rd_buffer[0];//temperature data
-
-	submit_imu_packet(&pkt, VCOM_putchar);
-}
-
-void LSM303DLH_m_get_data_callback(i2c_master_xact_t* caller, i2c_master_xact_t* i2c_s){
-	//TODO: send xact_success failure over USB
-
-	imuPacket pkt;
-	pkt.ID = ADDR_MAG;
-	pkt.timestamp = LSM303DLH_m_timestamp;
-	pkt.status = 0;
-	pkt.x = (uint16_t)i2c_s->i2c_rd_buffer[0] | (uint16_t)i2c_s->i2c_rd_buffer[1] << 8;
-	pkt.y = (uint16_t)i2c_s->i2c_rd_buffer[2] | (uint16_t)i2c_s->i2c_rd_buffer[3] << 8;
-	pkt.z = (uint16_t)i2c_s->i2c_rd_buffer[4] | (uint16_t)i2c_s->i2c_rd_buffer[5] << 8;
-	pkt.extra_data = 0;
-
-	submit_imu_packet(&pkt, VCOM_putchar);
-}
-
-static void empty_callback(i2c_master_xact_t* caller, i2c_master_xact_t* i2c_s) {
-	if(!(i2c_s->xact_success)){
-		uart0_putstring("\n***Some IMU I2C call failed***\n");
-	}
-	return;
-}
-
-void IMU_isr(){
+void GPIO_isr(){
 //	DISABLE_GPIO_INT;
-	uint32_t timestamp = T0TC;
+
 	//check IOIntStatus bit 0 - LPCUM 10.5.6.1. If 1, PORT0 interrupt.
 	if(!(IOIntStat & 1)){
 //		ENABLE_GPIO_INT;
 		return; //interrupt is not for IMU
 	}
-
-	//IO0IntStatR for pin interrupt status
-	//IO0IntClr to clear interrupt
-	if((IO0IntStatR & GYRO_INT2) || L3G4200D_STUCK){
-		L3G4200D_timestamp = timestamp;
-		L3G4200D_get_data(L3G4200D_get_data_callback);
-		IO0IntClr = GYRO_INT2;
-	}
-
-	if((IO0IntStatR & ACCEL_INT1) || LIS331HH_STUCK){
-		LIS331HH_timestamp = timestamp;
-		LIS331HH_get_data(LIS331HH_get_data_callback);
-		IO0IntClr =	ACCEL_INT1;
-	}
-
-	if((IO0IntStatR & MAG_DRDY) || LSM303DLH_M_STUCK){
-		LSM303DLH_m_timestamp = timestamp;
-		LSM303DLH_m_get_data(LSM303DLH_m_get_data_callback);
-		IO0IntClr =	 MAG_DRDY;
-	}
+	if((IO0IntStatR & 1<<26))
+			VCOM_putchar('A');
 
 //	ENABLE_GPIO_INT;
 	VICAddress = 0x0;
 }
 
-void IMU_init(){
-    i2c_init(I2C0, DEFAULT);
-    i2c_kHz(I2C0, 400);
+void GPIO_init(){
 
-    i2c_init(I2C1, I2C1_ALTPIN);
-    i2c_kHz(I2C1, 400);
-
-    i2c_init(I2C2, DEFAULT);
-    i2c_kHz(I2C2, 400);
 
 	//configure other wires, (addresses, etc.)
-	FIO0DIR |= ACCEL_SA0 | ACCEL_CS | MAG_SA | GYRO_SA0 | GYRO_CS;
-	FIO0SET = ACCEL_CS | GYRO_CS;
-	FIO0CLR = ACCEL_SA0 | MAG_SA | GYRO_SA0;
-
-	L3G4200D_init(I2C0);
-	LIS331HH_init(I2C1);
-	LSM303DLH_init_m(I2C2);
-
-	poll_wait(I2C0);
-	poll_wait(I2C1);
-	poll_wait(I2C2);
-
-    timer_init(TIMER_0, 0x0 , CCLK_DIV1);
-	RESET_TIMER0;
-	START_TIMER0;
+//	pin 0.26 input
+//	pin 0.23 output
+	PINSEL1 = 11<<20; //pulldown on p0.26
+	FIO0DIR |= 1<<23; //p0.23 output
+	IO0IntEnR |= 1<<26;
+//	FIO0SET = ACCEL_CS | GYRO_CS;
+//	FIO0CLR = ACCEL_SA0 | MAG_SA | GYRO_SA0;
 
 	//GPIO interrupt
-    VICVectAddr17 = (unsigned int) IMU_isr;
+    VICVectAddr17 = (unsigned int) GPIO_isr;
     ENABLE_GPIO_INT;
 }
 
@@ -553,140 +453,16 @@ void IMU_init(){
  * stream_task
  */
 static void stream_task() {
-	int c       = 0;
-	const uint8_t LIS331HH_speed[] = {
-			A_PWR_DOWN,
-			A_LPWR_ODR_05 | A_ALL_AXIS_ENABLE,
-			A_LPWR_ODR_1  | A_ALL_AXIS_ENABLE,
-			A_LPWR_ODR_2  | A_ALL_AXIS_ENABLE,
-			A_LPWR_ODR_5  | A_ALL_AXIS_ENABLE,
-			A_LPWR_ODR_10 | A_ALL_AXIS_ENABLE,
-			A_ODR_50      | A_ALL_AXIS_ENABLE,
-			A_ODR_100	  | A_ALL_AXIS_ENABLE,
-			A_ODR_400	  | A_ALL_AXIS_ENABLE,
-			A_ODR_1000	  | A_ALL_AXIS_ENABLE};
-	const int LIS331HH_Hz[] = {0, -5, 1, 2, 5, 10, 50, 100, 400, 1000};
-	const int LIS331HH_Hz_max_index = sizeof(LIS331HH_Hz)/sizeof(int);
-	int LIS331HH_cur_Hz = 5;	//A_LPWR_ODR_5, default speed
-
-	const uint8_t L3G4200D_speed[] = {
-			G_PWR_DOWN,
-			G_ODR_100 | G_PWR | G_ALL_AXIS_ENABLE | G_BW_H,
-			G_ODR_200 | G_PWR | G_ALL_AXIS_ENABLE | G_BW_H,
-			G_ODR_400 | G_PWR | G_ALL_AXIS_ENABLE | G_BW_H,
-			G_ODR_800 | G_PWR | G_ALL_AXIS_ENABLE | G_BW_H};
-	const int L3G4200D_Hz[] = {0, 100, 200, 400, 800};
-	const int L3G4200D_Hz_max_index = sizeof(L3G4200D_Hz)/sizeof(int);
-	int L3G4200D_cur_Hz = 1; //G_ODR_100, default speed
-
-	const uint8_t LSM303DLH_speed[] = {
-			C_SLEEP    | C_MR_REG_M_MASK,
-			C_ODR_0_75 | C_CRA_REG_M_MASK,
-			C_ODR_1_5  | C_CRA_REG_M_MASK,
-			C_ODR_3    | C_CRA_REG_M_MASK,
-			C_ODR_7_5  | C_CRA_REG_M_MASK,
-			C_ODR_15   | C_CRA_REG_M_MASK,
-			C_ODR_30   | C_CRA_REG_M_MASK,
-			C_ODR_75   | C_CRA_REG_M_MASK};
-	const int LSM303DLH_Hz[] = {0, -75, 1, 3, 7, 15, 30, 75};
-	const int LSM303DLH_Hz_max_index = sizeof(LSM303DLH_Hz)/sizeof(int);
-	int LSM303DLH_cur_Hz = 4; //C_ODR_7_5, default speed
-
-	runstate_g.state = STOP;
+	char c    = 0;
 
 	while (1) {
-		switch(runstate_g.state) {
-		case GO:
-			break;
-		case STOP:
-			// stop getting samples
-//			IO0IntEnR &= ~(MAG_INT1 | MAG_INT1);
-			IO0IntEnR &= ~(MAG_DRDY);
-			IO0IntEnR &= ~(ACCEL_INT1);
-			IO0IntEnR &= ~(GYRO_INT2);
-			all_led_off();
-			BLUE_LED_ON;
-			break;
-		case RESET:
-			runstate_g.state = GO;
- 			VCOM_init();
-//			IO0IntEnR |= MAG_INT1 | MAG_INT1;
-			IO0IntEnR |= MAG_DRDY;
-			IO0IntEnR |= ACCEL_INT1;
-			IO0IntEnR |= GYRO_INT2;
-			if(L3G4200D_STUCK){
-				L3G4200D_get_data(empty_callback);
-			}
-			if(LIS331HH_STUCK){
-				LIS331HH_get_data(empty_callback);
-			}
-			if(LSM303DLH_M_STUCK){
-				LSM303DLH_m_get_data(empty_callback);
-			}
-			break;
-		default:
-			DBG(UART0, "stream_task(): INVALID STATE\n");
-			all_led_off();
-			RED_LED_ON;
-			break;
-		}
 
 		c = VCOM_getchar();
 		switch(IMU_INST(c)){
 		case EOF:
 			break;
-		case INST_GO:
-			all_led_off();
-			GREEN_LED_ON;
-			runstate_g.state = GO;
-			DBG(UART0,"Go detected\n");
-			break;
-		case INST_STOP:
-			runstate_g.state = STOP;
-			DBG(UART0,"Stop detected\n");
-			break;
-		case INST_RESET:
-			runstate_g.state = RESET;
-			DBG(UART0,"Reset detected\n");
-			break;
-		case INST_INC_SPEED:
-			if((IMU_ADDR(c) & ADDR_ACC) && (LIS331HH_cur_Hz < LIS331HH_Hz_max_index)){
-				++LIS331HH_cur_Hz;
-				DBG(UART0, "Increased acc speed to %d Hz\n", LIS331HH_Hz[LIS331HH_cur_Hz]);
-				LIS331HH_set_ctrl_reg(1, LIS331HH_speed[LIS331HH_cur_Hz]);
-			}
-			if((IMU_ADDR(c) & ADDR_GYR) && (L3G4200D_cur_Hz < L3G4200D_Hz_max_index)){
-				++L3G4200D_cur_Hz;
-				DBG(UART0, "Increased gyr speed to %d Hz\n", L3G4200D_Hz[L3G4200D_cur_Hz]);
-				L3G4200D_set_ctrl_reg(1, L3G4200D_speed[L3G4200D_cur_Hz]);
-			}
-			if((IMU_ADDR(c) & ADDR_MAG) && (LSM303DLH_cur_Hz < LSM303DLH_Hz_max_index)){
-				++LSM303DLH_cur_Hz;
-				DBG(UART0, "Increased mag speed to %d Hz\n", LSM303DLH_Hz[LSM303DLH_cur_Hz]);
-				LSM303DLH_m_set_ctrl_reg(1, LSM303DLH_speed[LSM303DLH_cur_Hz]);
-				if(LSM303DLH_cur_Hz == 1) //waking up
-					LSM303DLH_m_set_ctrl_reg(3, C_CONT_CONV & C_MR_REG_M_MASK);
-			}
-			break;
-		case INST_DEC_SPEED:
-			if((IMU_ADDR(c) & ADDR_ACC) && (LIS331HH_cur_Hz > 0)){
-				--LIS331HH_cur_Hz;
-				DBG(UART0, "Decreased acc speed to %d Hz\n", LIS331HH_Hz[LIS331HH_cur_Hz]);
-				LIS331HH_set_ctrl_reg(1, LIS331HH_speed[LIS331HH_cur_Hz]);
-			}
-			if((IMU_ADDR(c) & ADDR_GYR) && (L3G4200D_cur_Hz > 0)){
-				--L3G4200D_cur_Hz;
-				DBG(UART0, "Decreased gyr speed to %d Hz\n", L3G4300D_Hz[L3G4200D_cur_Hz]);
-				L3G4200D_set_ctrl_reg(1, L3G4200D_speed[L3G4200D_cur_Hz]);
-			}
-			if((IMU_ADDR(c) & ADDR_MAG) && (LSM303DLH_cur_Hz > 0)){
-				--LSM303DLH_cur_Hz;
-				DBG(UART0, "Decreased mag speed to %d Hz\n", LSM303DLH_Hz[LSM303DLH_cur_Hz]);
-				if(LSM303DLH_cur_Hz == 0) //going to sleep
-					LSM303DLH_m_set_ctrl_reg(3, C_SLEEP & C_MR_REG_M_MASK);
-				else
-					LSM303DLH_m_set_ctrl_reg(1, LSM303DLH_speed[LSM303DLH_cur_Hz]);
-			}
+		case 'B':
+			FIO0SET = 1<<23;
 			break;
 		default:
 			color_led_flash(5, RED_LED, FLASH_FAST );
@@ -702,7 +478,7 @@ static void stream_task() {
 
 int main(void){
 
-	volatile uint32_t* udcaHeadArray[32] __attribute__((aligned(128))); //todo: does this work with linker
+
     pllstart_seventytwomhz();
     mam_enable();
     uart0_init_115200();
@@ -735,9 +511,6 @@ int main(void){
     // register device event handler
     USBHwRegisterDevIntHandler(USBDevIntHandler);
 
-    // turn on USB DMA
-    USBInitializeUSBDMA(udcaHeadArray);
-    //todo:finish DMA
 
     // Initialize VCOM
     VCOM_init();
@@ -762,12 +535,10 @@ int main(void){
 
     DBG(UART0,"USBHwConnect\n");
 
+    GPIO_init();
 
     init_color_led();
     RED_LED_ON;
-
-    DBG(UART0, "IMU_init()\n");
-	IMU_init();
 
 	DBG(UART0, "stream_task()\n");
     stream_task();

@@ -213,12 +213,14 @@ void bulk_in_cb(struct libusb_transfer *transfer){
 
 	switch(transfer->status){
 	case LIBUSB_TRANSFER_COMPLETED:
-		for(i = 0; i < MAX_PACKET_SIZE; ++i){
-			if(buf[0] == 'A')
+		for(i = 0; i < transfer->actual_length; ++i){
+			if(buf[i] == 'A'){
 //				write(sfd, 'U', 1);
 				fprintf(stdout, "\n");
-			else
-				fprintf(stdout, "UNEXPECTED SIGNAL\n");
+			}
+//			else
+//				fprintf(stdout, "UNEXPECTED SIGNAL\n");
+
 		}
 		retErr = libusb_submit_transfer(transfer);
 		break;

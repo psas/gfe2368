@@ -209,14 +209,16 @@ void bulk_in_cb(struct libusb_transfer *transfer){
 
 	unsigned char *buf = transfer->buffer;
 	int retErr;
+	int i
 
 	switch(transfer->status){
 	case LIBUSB_TRANSFER_COMPLETED:
-
-		if(buf[0] == 'A')
-			write(sfd, 'U', 1);
-		else
-			fprintf(stdout, "UNEXPECTED SIGNAL\n");
+		for(i = 0; i < MAX_PACKET_SIZE; ++i){
+			if(buf[0] == 'A')
+				write(sfd, 'U', 1);
+			else
+				fprintf(stdout, "UNEXPECTED SIGNAL\n");
+		}
 		retErr = libusb_submit_transfer(transfer);
 		break;
 	case LIBUSB_TRANSFER_CANCELLED:

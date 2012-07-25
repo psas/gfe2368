@@ -428,10 +428,25 @@ void GPIO_isr(){
 ////		ENABLE_GPIO_INT;
 //		return; //interrupt is not for IMU
 //	}
+//	BLUE_LED_ON;
 	if((IO0IntStatR & 1<<USB_TEST_IN)){
-			VCOM_putchar('A');
-			IO0IntClr = 1<<USB_TEST_IN;
+		IO0IntClr = 1<<USB_TEST_IN;
+		VCOM_putchar('A');
+		color_led_flash(1, BLUE_LED, FLASH_FAST );
 	}
+	if((IO0IntStatF & 1<<USB_TEST_IN)){
+//		IO0IntClr = 1<<USB_TEST_IN;
+//		VCOM_putchar('A');
+//		if(FIO0SET & 1<<USB_TEST_OUT)
+//			FIO0CLR = 1<<USB_TEST_OUT;
+//		else
+//			FIO0SET = 1<<USB_TEST_OUT;
+//
+		color_led_flash(1, GREEN_LED, FLASH_FAST );
+//
+////			GREEN_LED_ON;
+	}
+
 //	ENABLE_GPIO_INT;
 	VICAddress = 0x0;
 }
@@ -442,9 +457,11 @@ void GPIO_init(){
 	//configure other wires, (addresses, etc.)
 //	pin 0.26 input
 //	pin 0.23 output
-	PINSEL1 = 11<<0; //pulldown on p0.16
-	FIO0DIR |= 1<<USB_TEST_OUT; //p0.23 output
+	PINSEL1   |= 0x3<<0; //pulldown on p0.16
+	FIO0DIR   |= 1<<USB_TEST_OUT; //p0.23 output
 	IO0IntEnR |= 1<<USB_TEST_IN;
+//	IO0IntEnF |= 1<<USB_TEST_IN;
+
 //	FIO0SET = ACCEL_CS | GYRO_CS;
 //	FIO0CLR = ACCEL_SA0 | MAG_SA | GYRO_SA0;
 
@@ -458,21 +475,21 @@ void GPIO_init(){
  */
 static void stream_task() {
 	char c    = 0;
-
 	while (1) {
 
 		c = VCOM_getchar();
-		switch(IMU_INST(c)){
-		case EOF:
-			break;
+		switch(c){
+//		case EOF:
+//			break;
 		case 'B':
+			VCOM_putchar(c);
 			if(FIO0SET & 1<<USB_TEST_OUT)
 				FIO0CLR = 1<<USB_TEST_OUT;
 			else
 				FIO0SET = 1<<USB_TEST_OUT;
 			break;
 		default:
-			color_led_flash(5, RED_LED, FLASH_FAST );
+//			color_led_flash(5, RED_LED, FLASH_FAST );
 			break;
 		}
 	}
@@ -542,12 +559,14 @@ int main(void){
 
     DBG(UART0,"USBHwConnect\n");
 
-    GPIO_init();
 
     init_color_led();
     RED_LED_ON;
 
-	DBG(UART0, "stream_task()\n");
+    GPIO_init();
+
+    DBG(UART0, "stream_task()\n");
+
     stream_task();
 
     return 0;

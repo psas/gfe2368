@@ -35,7 +35,53 @@
 GMainLoop * edfc_main = NULL; //todo:ugg, need better data flow
 
 void print_libusb_error(int libusberrno, char* str) {
-	fprintf(stderr, "**%s: %d\n", str, libusberrno);
+	switch(libusberrno) {
+    case LIBUSB_SUCCESS:
+		fprintf(stderr, "**%s: SUCCESS\n",str);
+		break;
+    case LIBUSB_ERROR_IO:
+		fprintf(stderr, "**%s: ERROR_IO\n",str);
+		break;
+	case LIBUSB_ERROR_INVALID_PARAM:
+		fprintf(stderr, "**%s: ERROR_INVALID_PARAM\n",str);
+		break;
+	case LIBUSB_ERROR_ACCESS:
+		fprintf(stderr, "**%s: ERROR_ACCESS\n",str);
+		break;
+	case LIBUSB_ERROR_NO_DEVICE:
+		fprintf(stderr, "**%s: ERROR_NO_DEVICE\n",str);
+		break;
+	case LIBUSB_ERROR_NOT_FOUND:
+		fprintf(stderr, "**%s: ERROR_NOT_FOUND\n",str);
+		break;
+	case LIBUSB_ERROR_BUSY:
+	   fprintf(stderr, "**%s: ERROR_BUSY\n",str);
+	   break;
+    case LIBUSB_ERROR_TIMEOUT:
+		fprintf(stderr, "**%s: ERROR_TIMEOUT\n",str);
+		break;
+	case LIBUSB_ERROR_OVERFLOW:
+		fprintf(stderr, "**%s: ERROR_OVERFLOW\n",str);
+		break;
+	case LIBUSB_ERROR_PIPE:
+		fprintf(stderr, "**%s: ERROR_PIPE\n",str);
+		break;
+	case LIBUSB_ERROR_INTERRUPTED:
+		fprintf(stderr, "**%s: ERROR_INTERRUPTED\n",str);
+		break;
+	case LIBUSB_ERROR_NO_MEM:
+		fprintf(stderr, "**%s: ERROR_NO_MEM\n",str);
+		break;
+	case LIBUSB_ERROR_NOT_SUPPORTED:
+		fprintf(stderr, "**%s: ERROR_NOT_SUPPORTED\n",str);
+		break;
+	case LIBUSB_ERROR_OTHER:
+		fprintf(stderr, "**%s: ERROR_OTHER\n",str);
+		break;
+	default:
+		fprintf(stderr, "***%s:  unknown error %i ***\n", str, libusberrno);
+		break;
+    }
 //	fprintf(stderr, "**%s: %s, %d\n", str, libusb_error_name(libusberrno), libusberrno);
 }
 

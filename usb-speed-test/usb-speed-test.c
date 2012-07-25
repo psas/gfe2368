@@ -73,6 +73,9 @@ static volatile BOOL    fChainDone;
 static fifo_type           txfifo;
 static fifo_type           rxfifo;
 
+#define USB_TEST_IN 16
+#define USB_TEST_OUT 17
+
 struct {
    runstate_type state;
 } runstate_g;
@@ -421,13 +424,14 @@ void GPIO_isr(){
 //	DISABLE_GPIO_INT;
 
 	//check IOIntStatus bit 0 - LPCUM 10.5.6.1. If 1, PORT0 interrupt.
-	if(!(IOIntStat & 1)){
-//		ENABLE_GPIO_INT;
-		return; //interrupt is not for IMU
-	}
-	if((IO0IntStatR & 1<<26))
+//	if(!(IOIntStat & 1)){
+////		ENABLE_GPIO_INT;
+//		return; //interrupt is not for IMU
+//	}
+	if((IO0IntStatR & 1<<USB_TEST_IN)){
 			VCOM_putchar('A');
-
+			IO0IntClr = 1<<USB_TEST_IN;
+	}
 //	ENABLE_GPIO_INT;
 	VICAddress = 0x0;
 }
@@ -438,9 +442,9 @@ void GPIO_init(){
 	//configure other wires, (addresses, etc.)
 //	pin 0.26 input
 //	pin 0.23 output
-	PINSEL1 = 11<<20; //pulldown on p0.26
-	FIO0DIR |= 1<<23; //p0.23 output
-	IO0IntEnR |= 1<<26;
+	PINSEL1 = 11<<0; //pulldown on p0.16
+	FIO0DIR |= 1<<USB_TEST_OUT; //p0.23 output
+	IO0IntEnR |= 1<<USB_TEST_IN;
 //	FIO0SET = ACCEL_CS | GYRO_CS;
 //	FIO0CLR = ACCEL_SA0 | MAG_SA | GYRO_SA0;
 
@@ -462,7 +466,10 @@ static void stream_task() {
 		case EOF:
 			break;
 		case 'B':
-			FIO0SET = 1<<23;
+			if(FIO0SET & 1<<USB_TEST_OUT)
+				FIO0CLR = 1<<USB_TEST_OUT;
+			else
+				FIO0SET = 1<<USB_TEST_OUT;
 			break;
 		default:
 			color_led_flash(5, RED_LED, FLASH_FAST );

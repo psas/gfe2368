@@ -19,6 +19,12 @@
 #include <time.h>
 #include <poll.h>
 
+#include <string.h>  /* String function definitions */
+#include <unistd.h>  /* UNIX standard function definitions */
+#include <fcntl.h>   /* File control definitions */
+#include <errno.h>   /* Error number definitions */
+#include <termios.h> /* POSIX terminal control definitions */
+
 #include "include/usb-speed-test-host.h"
 #include "include/libusb-gsource.h"
 #include "../include/imu-device-host-interface.h"
@@ -33,6 +39,7 @@
 #define NUM_IFACES	1
 
 GMainLoop * edfc_main = NULL; //todo:ugg, need better data flow
+int sfd;
 
 void print_libusb_error(int libusberrno, char* str) {
 	switch(libusberrno) {
@@ -207,7 +214,7 @@ void bulk_in_cb(struct libusb_transfer *transfer){
 	case LIBUSB_TRANSFER_COMPLETED:
 
 		if(buf[0] == 'A')
-			fprintf(stdout, "SIGNAL RECEIVED\n");
+			write(sfd, 'U', 1);
 		else
 			fprintf(stdout, "UNEXPECTED SIGNAL\n");
 		retErr = libusb_submit_transfer(transfer);
@@ -296,6 +303,26 @@ void libusb_mainloop_error_cb(int timeout, int handle_events, GMainLoop * loop){
 	g_main_loop_quit(loop);
 }
 
+int open_port(void)
+{
+  int fd; /* File descriptor for the port */
+
+
+  fd = open("/dev/ttyS0", O_RDWR | O_NOCTTY | O_NDELAY);
+  if (fd == -1)
+  {
+   /*
+* Could not open the port.
+*/
+
+perror("open_port: Unable to open /dev/ttyS0 - ");
+  }
+  else
+fcntl(fd, F_SETFL, 0);
+
+  return (fd);
+}
+
 int main(){
 	int usbErr = 0;
 	int iface_num[NUM_IFACES];
@@ -312,6 +339,8 @@ int main(){
 	GMainContext * edfc_context = NULL;
 	GIOChannel * g_stdin = NULL;
 	GSource * gs_stdin = NULL;
+
+	sfd = open_port();
 
 	usbErr = libusb_init(&imu_host);
 	if(usbErr){

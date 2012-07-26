@@ -3,18 +3,19 @@
 # common make command for testing
 #
 
-GCC_VERSION     ?= 4.5.2
-CROSS           ?= /opt/cross
+GCC_VERSION     ?= 4.5.1
+CROSS           ?= /home/theo/.CodeSourcery/Sourcery_G++_Lite
+CROSSNAME		?= arm-none-eabi
 
-ARMLINUXGCCLIB  := $(CROSS)/lib/gcc/arm-elf/$(GCC_VERSION)
-ARMLINUXLIB     := $(CROSS)/arm-elf/lib
+ARMLINUXGCCLIB  := $(CROSS)/lib/gcc/$(CROSSNAME)/$(GCC_VERSION)
+ARMLINUXLIB     := $(CROSS)/$(CROSSNAME)/lib
 
-CC              := $(CROSS)/bin/arm-elf-gcc
-LD              := $(CROSS)/bin/arm-elf-ld
-AR              := $(CROSS)/bin/arm-elf-ar
-AS              := $(CROSS)/bin/arm-elf-as
-CP              := $(CROSS)/bin/arm-elf-objcopy
-OD              := $(CROSS)/bin/arm-elf-objdump
+CC              := $(CROSS)/bin/$(CROSSNAME)-gcc
+LD              := $(CROSS)/bin/$(CROSSNAME)-ld
+AR              := $(CROSS)/bin/$(CROSSNAME)-ar
+AS              := $(CROSS)/bin/$(CROSSNAME)-as
+CP              := $(CROSS)/bin/$(CROSSNAME)-objcopy
+OD              := $(CROSS)/bin/$(CROSSNAME)-objdump
 
 TYPE            ?= lpc23xx
 
@@ -46,7 +47,7 @@ COBJS           = $(CSRCS:.c=.o)
 
 AOBJS           = $(ASRCS:.s=.o)
 
-EXLIBS          =  $(LIBDIR)/libgfe2368.a $(LPCLIBDIR)/liblpc23xx.a
+EXLIBS          = $(LIBDIR)/libgfe2368.a $(LPCLIBDIR)/liblpc23xx.a 
 
 PROGS           = $(NAME).out
 
@@ -74,7 +75,7 @@ $(EXLIBS):
 
 $(PROGS): $(AOBJS) $(COBJS) $(EXLIBS)
 	@echo "========= LINKING $@ ========================"
-	@$(LD) $(LDFLAGS) -o $@ $(AOBJS) $(COBJS) $(EXLIBS) -L$(CROSS)/arm-elf/lib -lc -lm -L$(CROSS)/lib/gcc/arm-elf/$(GCC_VERSION) -lgcc
+	@$(LD) $(LDFLAGS) -o $@ $(AOBJS) $(COBJS) $(EXLIBS) -L$(CROSS)/$(CROSSNAME)/lib -lc -lm -L$(CROSS)/lib/gcc/$(CROSSNAME)/$(GCC_VERSION) -lgcc
 
 $(NAME).hex: $(NAME).out
 	@echo "========= .hex file for $< =================="

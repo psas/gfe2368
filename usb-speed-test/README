@@ -1,0 +1,8 @@
+Supports the three IMU sensors on the GFE2368.
+
+Not actually much of a readme :-/
+
+Modified:
+gfe general test make to have $(CROSSNAME), my own cross loc
+liblpc23xx make to have $(CROSSNAME), my own cross loc
+gfe2368 make to have $(CROSSNAME), my own cross loc

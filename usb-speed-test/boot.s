@@ -1,0 +1,1 @@
+../liblpc23xx/startup/boot.s

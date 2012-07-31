@@ -76,11 +76,6 @@ static fifo_type           rxfifo;
 #define USB_TEST_IN 16
 #define USB_TEST_OUT 17
 
-struct {
-   runstate_type state;
-} runstate_g;
-
-
 
 static const uint8_t abDescriptors[] = {
 
@@ -421,18 +416,11 @@ static void USBDevIntHandler(uint8_t bDevStatus)
 }
 
 void GPIO_isr(){
-//	DISABLE_GPIO_INT;
 
-	//check IOIntStatus bit 0 - LPCUM 10.5.6.1. If 1, PORT0 interrupt.
-//	if(!(IOIntStat & 1)){
-////		ENABLE_GPIO_INT;
-//		return; //interrupt is not for IMU
-//	}
-//	BLUE_LED_ON;
 	if((IO0IntStatR & 1<<USB_TEST_IN)){
 		IO0IntClr = 1<<USB_TEST_IN;
 		VCOM_putchar('A');
-		color_led_flash(1, BLUE_LED, FLASH_FAST );
+		color_led_flash(1, BLUE_LED, FLASH_FAST);
 	}
 	if((IO0IntStatF & 1<<USB_TEST_IN)){
 //		IO0IntClr = 1<<USB_TEST_IN;
@@ -442,54 +430,43 @@ void GPIO_isr(){
 //		else
 //			FIO0SET = 1<<USB_TEST_OUT;
 //
-		color_led_flash(1, GREEN_LED, FLASH_FAST );
-//
-////			GREEN_LED_ON;
+		color_led_flash(1, GREEN_LED, FLASH_FAST);
 	}
-
-//	ENABLE_GPIO_INT;
 	VICAddress = 0x0;
 }
 
 void GPIO_init(){
 
-
-	//configure other wires, (addresses, etc.)
-//	pin 0.26 input
-//	pin 0.23 output
-	PINSEL1   |= 0x3<<0; //pulldown on p0.16
-	FIO0DIR   |= 1<<USB_TEST_OUT; //p0.23 output
+	PINMODE1  |= 0x3<<0;          //pulldown on p0.16
+	FIO0DIR   |= 1<<USB_TEST_OUT;
 	IO0IntEnR |= 1<<USB_TEST_IN;
 //	IO0IntEnF |= 1<<USB_TEST_IN;
 
-//	FIO0SET = ACCEL_CS | GYRO_CS;
-//	FIO0CLR = ACCEL_SA0 | MAG_SA | GYRO_SA0;
-
-	//GPIO interrupt
     VICVectAddr17 = (unsigned int) GPIO_isr;
     ENABLE_GPIO_INT;
 }
 
 /*
- * stream_task
+ * stream_task polls the Rx fifo and acts on any known commands that it receives.
  */
 static void stream_task() {
-	char c    = 0;
-	while (1) {
+	int c;
 
+	while(1){
 		c = VCOM_getchar();
 		switch(c){
-//		case EOF:
-//			break;
+		case EOF:
+			break;
 		case 'B':
-			VCOM_putchar(c);
+			VCOM_putchar('B');
 			if(FIO0SET & 1<<USB_TEST_OUT)
 				FIO0CLR = 1<<USB_TEST_OUT;
 			else
 				FIO0SET = 1<<USB_TEST_OUT;
 			break;
 		default:
-//			color_led_flash(5, RED_LED, FLASH_FAST );
+			//received an unexpected character.
+			color_led_flash(5, RED_LED, FLASH_FAST);
 			break;
 		}
 	}

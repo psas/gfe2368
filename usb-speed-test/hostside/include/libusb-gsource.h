@@ -9,6 +9,8 @@
 #define LIBUSB_GSOURCE_H_
 
 typedef void (*libusbSourceErrorCallback)(int, int, GMainLoop *);
+typedef gboolean (*is_device)(libusb_device * device);
+
 
 typedef struct libusbSource {
 	GSource source;
@@ -20,5 +22,8 @@ typedef struct libusbSource {
 } libusbSource;
 
 libusbSource * libusb_source_new(libusb_context * context);
-
+libusb_device_handle * open_usb_device_handle(libusb_context * context,
+    is_device is_device, int * iface_num, int num_ifaces);
+void print_libusb_error(int libusberrno, char* str);
+void print_libusb_transfer_error(int status, char* str);
 #endif /* LIBUSB_GSOURCE_H_ */

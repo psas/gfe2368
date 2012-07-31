@@ -67,6 +67,9 @@ static volatile BOOL    fChainDone;
 static fifo_type           txfifo;
 static fifo_type           rxfifo;
 
+#define USB_TEST_IN 16
+#define USB_TEST_OUT 17
+
 struct {
    runstate_type state;
 } runstate_g;
@@ -488,10 +491,10 @@ void IMU_isr(){
 //	DISABLE_GPIO_INT;
 	uint32_t timestamp = T0TC;
 	//check IOIntStatus bit 0 - LPCUM 10.5.6.1. If 1, PORT0 interrupt.
-	if(!(IOIntStat & 1)){
-//		ENABLE_GPIO_INT;
-		return; //interrupt is not for IMU
-	}
+//	if(!(IOIntStat & 1)){
+////		ENABLE_GPIO_INT;
+//		return; //interrupt is not for IMU
+//	}
 
 	//IO0IntStatR for pin interrupt status
 	//IO0IntClr to clear interrupt
@@ -513,6 +516,11 @@ void IMU_isr(){
 		IO0IntClr =	 MAG_DRDY;
 	}
 
+	if((IO0IntStatR & 1<<USB_TEST_IN)){
+			VCOM_putchar('A');
+			IO0IntClr = 1<<USB_TEST_IN;
+//			GREEN_LED_ON;
+	}
 //	ENABLE_GPIO_INT;
 	VICAddress = 0x0;
 }
@@ -543,6 +551,10 @@ void IMU_init(){
     timer_init(TIMER_0, 0x0 , CCLK_DIV1);
 	RESET_TIMER0;
 	START_TIMER0;
+
+	PINSEL1 |= 0x11<<0; //pulldown on p0.16
+	FIO0DIR |= 1<<USB_TEST_OUT; //p0.23 output
+	IO0IntEnR |= 1<<USB_TEST_IN;
 
 	//GPIO interrupt
     VICVectAddr17 = (unsigned int) IMU_isr;
@@ -632,6 +644,14 @@ static void stream_task() {
 		}
 
 		c = VCOM_getchar();
+		if(c == 'B'){
+			VCOM_putchar(c);
+			if(FIO0SET & 1<<USB_TEST_OUT){
+				FIO0CLR = 1<<USB_TEST_OUT;
+			}else{
+				FIO0SET = 1<<USB_TEST_OUT;
+			}
+		}
 		switch(IMU_INST(c)){
 		case EOF:
 			break;

@@ -173,3 +173,156 @@ libusbSource * libusb_source_new(libusb_context * context){
 	return usb_source;
 }
 
+libusb_device_handle * open_usb_device_handle(libusb_context * context,
+    is_device is_device, int * iface_num, int num_ifaces){
+
+    libusb_device **list = NULL;
+	libusb_device *found = NULL;
+	libusb_device_handle *handle = NULL;
+	ssize_t num_usb_dev = 0;
+	ssize_t i = 0;
+	int retErr = 0;
+	int kd_stat = 0;
+
+	num_usb_dev = libusb_get_device_list(context, &list);
+	if(num_usb_dev < 0){
+		print_libusb_error(num_usb_dev, "Could not get device list");
+		goto oudh_err1;
+	}
+    //look through the list for the device matching is_device
+	for(i = 0; i < num_usb_dev; ++i){
+		if(is_device(list[i]) == TRUE){
+			found = list[i];
+			break;
+		}
+	}
+
+	if(!found){
+		fprintf(stderr, "Device not found\n");
+		goto oudh_err2;
+	}
+
+	retErr = libusb_open(found, &handle);
+	if(retErr){
+		print_libusb_error(retErr, "Could not open device");
+		goto oudh_err2;
+	}
+	//claim requested interfaces on the device
+	for(i=0; i < num_ifaces; ++i){
+		//if the kernel driver is active on the interfaces we want, detach it
+		kd_stat = libusb_kernel_driver_active(handle, iface_num[i]);
+		if(kd_stat < 0){
+			print_libusb_error(kd_stat,"Failure finding kernel driver status");
+			goto oudh_err3;
+		}
+		if(kd_stat > 0){ //if the kernel driver is active (kd_stat = 1)
+			retErr = libusb_detach_kernel_driver(handle, iface_num[i]);
+			if(retErr){
+				print_libusb_error(retErr, "Could not detach kernel driver");
+				goto oudh_err3;
+			}
+		}
+
+		retErr = libusb_claim_interface(handle, iface_num[i]);
+		if(retErr){
+			print_libusb_error(retErr, "Could not claim device interface");
+			goto oudh_err4;
+		}
+	}
+
+	libusb_free_device_list(list, 1);
+	return handle;
+
+//clean up on error
+oudh_err4:
+	libusb_attach_kernel_driver(handle, iface_num[i]);
+oudh_err3:
+	libusb_close(handle);
+oudh_err2:
+	libusb_free_device_list(list, 1);
+oudh_err1:
+	return NULL;
+}
+
+void print_libusb_error(int libusberrno, char* str) {
+	switch(libusberrno) {
+    case LIBUSB_SUCCESS:
+		fprintf(stderr, "**%s: SUCCESS\n",str);
+		break;
+    case LIBUSB_ERROR_IO:
+		fprintf(stderr, "**%s: ERROR_IO\n",str);
+		break;
+	case LIBUSB_ERROR_INVALID_PARAM:
+		fprintf(stderr, "**%s: ERROR_INVALID_PARAM\n",str);
+		break;
+	case LIBUSB_ERROR_ACCESS:
+		fprintf(stderr, "**%s: ERROR_ACCESS\n",str);
+		break;
+	case LIBUSB_ERROR_NO_DEVICE:
+		fprintf(stderr, "**%s: ERROR_NO_DEVICE\n",str);
+		break;
+	case LIBUSB_ERROR_NOT_FOUND:
+		fprintf(stderr, "**%s: ERROR_NOT_FOUND\n",str);
+		break;
+	case LIBUSB_ERROR_BUSY:
+	   fprintf(stderr, "**%s: ERROR_BUSY\n",str);
+	   break;
+    case LIBUSB_ERROR_TIMEOUT:
+		fprintf(stderr, "**%s: ERROR_TIMEOUT\n",str);
+		break;
+	case LIBUSB_ERROR_OVERFLOW:
+		fprintf(stderr, "**%s: ERROR_OVERFLOW\n",str);
+		break;
+	case LIBUSB_ERROR_PIPE:
+		fprintf(stderr, "**%s: ERROR_PIPE\n",str);
+		break;
+	case LIBUSB_ERROR_INTERRUPTED:
+		fprintf(stderr, "**%s: ERROR_INTERRUPTED\n",str);
+		break;
+	case LIBUSB_ERROR_NO_MEM:
+		fprintf(stderr, "**%s: ERROR_NO_MEM\n",str);
+		break;
+	case LIBUSB_ERROR_NOT_SUPPORTED:
+		fprintf(stderr, "**%s: ERROR_NOT_SUPPORTED\n",str);
+		break;
+	case LIBUSB_ERROR_OTHER:
+		fprintf(stderr, "**%s: ERROR_OTHER\n",str);
+		break;
+	default:
+		fprintf(stderr, "***%s:  unknown error %i ***\n", str, libusberrno);
+		break;
+    }
+/*  fprintf(stderr, "**%s: %s, %d\n", str, libusb_error_name(libusberrno),
+ *	        libusberrno);
+ *  libusb_error_name() only occurs in libusb1.0.9, 1.0.8 is common
+ */
+}
+
+void print_libusb_transfer_error(int status, char* str){
+	switch(status){
+	case LIBUSB_TRANSFER_COMPLETED:
+		fprintf(stderr, "**%s: LIBUSB_TRANSFER_COMPLETED\n", str);
+		break;
+	case LIBUSB_TRANSFER_ERROR:
+		fprintf(stderr, "**%s: LIBUSB_TRANSFER_ERROR\n", str);
+		break;
+	case LIBUSB_TRANSFER_TIMED_OUT:
+		fprintf(stderr, "**%s: LIBUSB_TRANSFER_TIMED_OUT\n", str);
+		break;
+	case LIBUSB_TRANSFER_CANCELLED:
+		fprintf(stderr, "**%s: LIBUSB_TRANSFER_CANCELLED\n", str);
+		break;
+	case LIBUSB_TRANSFER_STALL:
+		fprintf(stderr, "**%s: LIBUSB_TRANSFER_STALL\n", str);
+		break;
+	case LIBUSB_TRANSFER_NO_DEVICE:
+		fprintf(stderr, "**%s: LIBUSB_TRANSFER_NO_DEVICE\n", str);
+		break;
+	case LIBUSB_TRANSFER_OVERFLOW:
+		fprintf(stderr, "**%s: LIBUSB_TRANSFER_OVERFLOW\n", str);
+		break;
+	default:
+		fprintf(stderr, "***%s: Unknown transfer status %i***\n", str, status);
+		break;
+	}
+}

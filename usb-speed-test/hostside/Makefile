@@ -1,12 +1,11 @@
 
-
+#todo: vpath
 
 NAME		= usb-speed-test-host
 
 CC		= gcc
 
 LDLIBS          = -lm $(shell pkg-config --libs glib-2.0 libusb-1.0)
-LDPPFLAGS       = -lm
 
 AR		= ar rcvs
 
@@ -17,7 +16,7 @@ CFLAGS          = $(INCLUDE) -c $(DEBUG) -Wall -O3 -g #-Wextra
 
 ###### SOURCES  #################
 
-CSRCS		 = $(NAME).c libusb-source.c imu-device-host-interface.c
+CSRCS		 = $(NAME).c libusb-gsource.c imu-device-host-interface.c
 
 COBJS            = $(CSRCS:.c=.o)
 
@@ -34,7 +33,7 @@ endif
 
 .NOTPARALLEL: rebuild 
 
-.PHONY: rebuild clean allclean
+.PHONY: rebuild clean
 
 .SUFFIXES : .c .cpp .o  
 

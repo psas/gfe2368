@@ -5,8 +5,8 @@
 
 NAME            := libgfe2368
 LPCLIBDIR       := ./liblpc23xx
-CROSS        	?= /home/theo/.CodeSourcery/Sourcery_G++_Lite
-CROSSNAME		?= arm-none-eabi
+CROSS        	?= /opt/cross
+CROSSNAME	?= arm-elf
 
 
 CC              := $(CROSS)/bin/$(CROSSNAME)-gcc

@@ -1,0 +1,7 @@
+*.dump
+*.hex
+*.map
+*.out
+*.bin
+*.lst
+

@@ -1,0 +1,12 @@
+
+
+Use USB as /dev/ttyACM{0,1..n} device.
+    Serial interface.
+
+The 'hostside' directory contains code for a linux host
+interface testing program.
+
+A suggested serial terminal to use is /usr/bin/minicom.
+
+
+

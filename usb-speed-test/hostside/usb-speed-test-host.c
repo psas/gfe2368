@@ -40,6 +40,7 @@
 
 GMainLoop * edfc_main = NULL; //todo:ugg, need better data flow
 int sfd;
+struct libusb_transfer * bulk_out_global = NULL;
 
 gboolean is_imu_device(libusb_device * device){
 	struct libusb_device_descriptor descr;
@@ -82,6 +83,9 @@ void bulk_in_cb(struct libusb_transfer *transfer){
 //				fprintf(stdout, "UNEXPECTED SIGNAL\n");
 
 		}
+		bulk_out_global->buffer[0] = 'B';
+		bulk_out_global->length = 1;
+		libusb_submit_transfer(bulk_out_global);
 		retErr = libusb_submit_transfer(transfer);
 		break;
 	case LIBUSB_TRANSFER_CANCELLED:
@@ -227,6 +231,7 @@ int main(){
 
 	bulk_in  = libusb_alloc_transfer(0);
 	bulk_out = libusb_alloc_transfer(0);
+	bulk_out_global = bulk_out;
 	//todo: slice allocate?
 	bulk_in_buffer  = calloc(MAX_PACKET_SIZE, sizeof(unsigned char));
 	bulk_out_buffer = calloc(MAX_PACKET_SIZE, sizeof(unsigned char));

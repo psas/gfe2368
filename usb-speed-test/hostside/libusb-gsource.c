@@ -10,6 +10,7 @@
 #include <time.h>
 #include <poll.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "libusb-gsource.h"
 

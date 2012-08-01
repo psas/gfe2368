@@ -66,13 +66,17 @@ void bulk_in_cb(struct libusb_transfer *transfer){
 	unsigned char *buf = transfer->buffer;
 	int retErr;
 	int i;
+	int bytes_written;
 
 	switch(transfer->status){
 	case LIBUSB_TRANSFER_COMPLETED:
 		for(i = 0; i < transfer->actual_length; ++i){
 			if(buf[i] == 'A'){
-//				write(sfd, 'U', 1);
-				fprintf(stdout, "\n");
+				bytes_written = write(sfd, "U", 1);
+				if (bytes_written == -1){
+					   perror("Unable to write to ttyS0 - ");
+				}
+//				fprintf(stdout, "\n");
 			}
 //			else
 //				fprintf(stdout, "UNEXPECTED SIGNAL\n");
@@ -169,12 +173,10 @@ void libusb_mainloop_error_cb(int timeout, int handle_events, GMainLoop * loop){
 int open_port(void){
    int fd; /* File descriptor for the port */
 
-   fd = open("/dev/ttyS0", O_RDWR | O_NOCTTY | O_NDELAY);
+   fd = open("/dev/ttyS0", O_RDWR | O_NOCTTY);
    if (fd == -1){
 	   perror("open_port: Unable to open /dev/ttyS0 - ");
-  }else
-	  fcntl(fd, F_SETFL, 0);
-
+  }
   return (fd);
 }
 
@@ -185,6 +187,7 @@ int main(){
 	libusb_context *imu_host = NULL;
 	libusb_device_handle *imu_handle = NULL;
 	libusbSource * usb_source = NULL;
+	ssize_t bytes_written = 0;
 
 	//todo: have something like endpoint[numendpoints] and place each transfer
 	//at the ep they correspond to?
@@ -199,84 +202,87 @@ int main(){
 	GSource * gs_stdin = NULL;
 
 	sfd = open_port();
-	write(sfd, "U\n", 2);
-//	usbErr = libusb_init(&imu_host);
-//	if(usbErr){
-//		print_libusb_error(usbErr, "libusb_init");
-//		exit(EXIT_FAILURE);
-//	}
-//	libusb_set_debug(imu_host, 3);
-//
-//	imu_handle = open_usb_device_handle(imu_host, is_imu_device, iface_num,
-//			                            NUM_IFACES);
-//	if(!imu_handle){
-//		printf("**imu_handle acquisition error\n");
-//		libusb_exit(imu_host);
-//		exit(EXIT_FAILURE);
-//	}
-//
-//	usb_source = libusb_source_new(imu_host);
-////	g_source_set_callback((GSource*) usb_source,
-////	                 (GSourceFunc)libusb_mainloop_error_cb, &edfc_main, NULL);
-//
-//	bulk_in  = libusb_alloc_transfer(0);
-//	bulk_out = libusb_alloc_transfer(0);
-//	//todo: slice allocate?
-//	bulk_in_buffer  = calloc(MAX_PACKET_SIZE, sizeof(unsigned char));
-//	bulk_out_buffer = calloc(MAX_PACKET_SIZE, sizeof(unsigned char));
-//	libusb_fill_bulk_transfer(bulk_in,
-//							  imu_handle,
-//							  BULK_IN_EP,
-//							  bulk_in_buffer,
-//							  MAX_PACKET_SIZE,
-//							  bulk_in_cb,
-//							  NULL,
-//							  0);
-//	libusb_fill_bulk_transfer(bulk_out,
-//							  imu_handle,
-//							  BULK_OUT_EP,
-//							  bulk_out_buffer,
-//							  MAX_PACKET_SIZE,
-//							  bulk_out_cb,
-//							  NULL,
-//							  0);
-//	bulkIO[0] = bulk_in;
-//	bulkIO[1] = bulk_out;
-//
-//	edfc_context = g_main_context_new(); //edfc == event driven flight computer
-//	edfc_main = g_main_loop_new(edfc_context, FALSE);
-//	g_stdin = g_io_channel_unix_new(fileno(stdin));
-//	if(!g_stdin){
-//		printf("error creating g_stdin\n");
-//	}
-//
-//	g_source_attach((GSource*) usb_source, edfc_context);
-//	gs_stdin = g_io_create_watch(g_stdin, G_IO_IN | G_IO_ERR | G_IO_HUP);
-//	g_source_set_callback(gs_stdin, (GSourceFunc)read_g_stdin, bulkIO, NULL);
-//	g_source_attach(gs_stdin, edfc_context);
-//
-//	printf("beginning main loop\n");
-//	g_main_loop_run(edfc_main);
-//	printf("main loop finished\n");
-////cleanup
-//	g_source_destroy(gs_stdin);
-//	g_io_channel_shutdown(g_stdin, TRUE, NULL); //todo: fix null
-//	free(bulk_in_buffer);
-//	free(bulk_out_buffer);
-//	libusb_free_transfer(bulk_in);
-//	libusb_free_transfer(bulk_out);
-//	g_source_destroy((GSource*) usb_source);
-//
-//	g_main_loop_unref(edfc_main);
-//	g_main_context_unref(edfc_context);
-//
-//	usbErr = libusb_release_interface(imu_handle, iface_num[0]);
-//	if(usbErr) print_libusb_error(usbErr, "exit libusb_release_interface");
-//	usbErr = libusb_attach_kernel_driver(imu_handle, iface_num[0]);
-//	if(usbErr) print_libusb_error(usbErr, "exit libusb_attach_kernel_driver");
-//	libusb_close(imu_handle);
-//	libusb_exit(imu_host);
-//
-//	exit(EXIT_SUCCESS);
+	bytes_written = write(sfd, "U\n", 2);
+	if (bytes_written == -1){
+		   perror("Unable to write to ttyS0 - ");
+	}
+	usbErr = libusb_init(&imu_host);
+	if(usbErr){
+		print_libusb_error(usbErr, "libusb_init");
+		exit(EXIT_FAILURE);
+	}
+	libusb_set_debug(imu_host, 3);
+
+	imu_handle = open_usb_device_handle(imu_host, is_imu_device, iface_num,
+			                            NUM_IFACES);
+	if(!imu_handle){
+		printf("**imu_handle acquisition error\n");
+		libusb_exit(imu_host);
+		exit(EXIT_FAILURE);
+	}
+
+	usb_source = libusb_source_new(imu_host);
+	g_source_set_callback((GSource*) usb_source,
+	                 (GSourceFunc)libusb_mainloop_error_cb, &edfc_main, NULL);
+
+	bulk_in  = libusb_alloc_transfer(0);
+	bulk_out = libusb_alloc_transfer(0);
+	//todo: slice allocate?
+	bulk_in_buffer  = calloc(MAX_PACKET_SIZE, sizeof(unsigned char));
+	bulk_out_buffer = calloc(MAX_PACKET_SIZE, sizeof(unsigned char));
+	libusb_fill_bulk_transfer(bulk_in,
+							  imu_handle,
+							  BULK_IN_EP,
+							  bulk_in_buffer,
+							  MAX_PACKET_SIZE,
+							  bulk_in_cb,
+							  NULL,
+							  0);
+	libusb_fill_bulk_transfer(bulk_out,
+							  imu_handle,
+							  BULK_OUT_EP,
+							  bulk_out_buffer,
+							  MAX_PACKET_SIZE,
+							  bulk_out_cb,
+							  NULL,
+							  0);
+	bulkIO[0] = bulk_in;
+	bulkIO[1] = bulk_out;
+
+	edfc_context = g_main_context_new(); //edfc == event driven flight computer
+	edfc_main = g_main_loop_new(edfc_context, FALSE);
+	g_stdin = g_io_channel_unix_new(fileno(stdin));
+	if(!g_stdin){
+		printf("error creating g_stdin\n");
+	}
+
+	g_source_attach((GSource*) usb_source, edfc_context);
+	gs_stdin = g_io_create_watch(g_stdin, G_IO_IN | G_IO_ERR | G_IO_HUP);
+	g_source_set_callback(gs_stdin, (GSourceFunc)read_g_stdin, bulkIO, NULL);
+	g_source_attach(gs_stdin, edfc_context);
+
+	printf("beginning main loop\n");
+	g_main_loop_run(edfc_main);
+	printf("main loop finished\n");
+//cleanup
+	g_source_destroy(gs_stdin);
+	g_io_channel_shutdown(g_stdin, TRUE, NULL); //todo: fix null
+	free(bulk_in_buffer);
+	free(bulk_out_buffer);
+	libusb_free_transfer(bulk_in);
+	libusb_free_transfer(bulk_out);
+	g_source_destroy((GSource*) usb_source);
+
+	g_main_loop_unref(edfc_main);
+	g_main_context_unref(edfc_context);
+
+	usbErr = libusb_release_interface(imu_handle, iface_num[0]);
+	if(usbErr) print_libusb_error(usbErr, "exit libusb_release_interface");
+	usbErr = libusb_attach_kernel_driver(imu_handle, iface_num[0]);
+	if(usbErr) print_libusb_error(usbErr, "exit libusb_attach_kernel_driver");
+	libusb_close(imu_handle);
+	libusb_exit(imu_host);
+
+	exit(EXIT_SUCCESS);
 }
 

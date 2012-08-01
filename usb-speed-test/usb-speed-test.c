@@ -203,6 +203,13 @@ static void BulkOut(uint8_t bEP, uint8_t bEPStatus) {
         return;
     }
 
+//    if(bEPStatus & EP_STATUS_NACKED){
+//		if(FIO0SET & 1<<USB_TEST_OUT)
+//			FIO0CLR = 1<<USB_TEST_OUT;
+//		else
+//			FIO0SET = 1<<USB_TEST_OUT;
+//    }
+
     // get data from USB into intermediate buffer
     iLen = USBHwEPRead(bEP, abBulkBuf, sizeof(abBulkBuf));
     DBG(UART0, "**BulkOut read %d chars\n", iLen);
@@ -266,7 +273,16 @@ static void SendNextBulkIn(uint8_t bEP, BOOL fFirstPacket)
   */
 static void BulkIn(uint8_t bEP, uint8_t bEPStatus)
 {
-    SendNextBulkIn(bEP, FALSE);
+    //printf_lpc(UART0, "0x%X\n", bEPStatus);
+	if(bEPStatus & EP_STATUS_NACKED){
+		if(FIO0SET & 1<<USB_TEST_OUT)
+			FIO0CLR = 1<<USB_TEST_OUT;
+		else
+			FIO0SET = 1<<USB_TEST_OUT;
+    }
+    //if(bEPStatus & (~EP_STATUS_NACKED)){
+    	SendNextBulkIn(bEP, FALSE);
+    //}
 }
 
 
@@ -459,14 +475,17 @@ static void stream_task() {
 			break;
 		case 'B':
 			VCOM_putchar('B');
-			if(FIO0SET & 1<<USB_TEST_OUT)
-				FIO0CLR = 1<<USB_TEST_OUT;
-			else
-				FIO0SET = 1<<USB_TEST_OUT;
+//			FIO0SET = 1<<USB_TEST_OUT;
+//			FIO0CLR = 1<<USB_TEST_OUT;
+//			if(FIO0SET & 1<<USB_TEST_OUT)
+//				FIO0CLR = 1<<USB_TEST_OUT;
+//			else
+//				FIO0SET = 1<<USB_TEST_OUT;
+//			break;
 			break;
 		default:
 			//received an unexpected character.
-			color_led_flash(5, RED_LED, FLASH_FAST);
+			color_led_flash(1, RED_LED, FLASH_FAST);
 			break;
 		}
 	}
@@ -504,6 +523,7 @@ int main(void){
     // register endpoint handlers
     USBHwRegisterEPIntHandler(INT_IN_EP, NULL);
     USBHwRegisterEPIntHandler(BULK_IN_EP, BulkIn);
+    USBHwNakIntEnable(0xFF);
     USBHwRegisterEPIntHandler(BULK_OUT_EP, BulkOut);
 
     // register frame handler

@@ -78,6 +78,9 @@ void bulk_in_cb(struct libusb_transfer *transfer){
 					   perror("Unable to write to ttyS0 - ");
 				}
 //				fprintf(stdout, "\n");
+				bulk_out_global->buffer[0] = 'B';
+				bulk_out_global->length = 1;
+				libusb_submit_transfer(bulk_out_global);
 			}
 //			else
 //				fprintf(stdout, "UNEXPECTED SIGNAL\n");
@@ -206,10 +209,10 @@ int main(){
 	GSource * gs_stdin = NULL;
 
 	sfd = open_port();
-	bytes_written = write(sfd, "U\n", 2);
-	if (bytes_written == -1){
-		   perror("Unable to write to ttyS0 - ");
-	}
+//	bytes_written = write(sfd, "U\n", 2);
+//	if (bytes_written == -1){
+//		   perror("Unable to write to ttyS0 - ");
+//	}
 	usbErr = libusb_init(&imu_host);
 	if(usbErr){
 		print_libusb_error(usbErr, "libusb_init");

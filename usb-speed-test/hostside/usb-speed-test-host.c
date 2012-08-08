@@ -211,7 +211,7 @@ void isoc_in_cb(struct libusb_transfer *transfer){
 
 	switch(transfer->status){
 	case LIBUSB_TRANSFER_COMPLETED:
-		for(i = 0; i < transfer->actual_length; ++i){
+		for(i = 0; i < transfer->iso_packet_desc[0].actual_length; ++i){
 			if(buf[i] == 'A'){
 //				printf("U\n");
 				bytes_written = write(sfd, "U", 1);
@@ -221,6 +221,7 @@ void isoc_in_cb(struct libusb_transfer *transfer){
 			}
 		}
 		libusb_submit_transfer(transfer);
+		libusb_submit_transfer(endpoint[BULK_OUT_EP]);
 		break;
 	case LIBUSB_TRANSFER_CANCELLED:
 		//do nothing.
@@ -506,7 +507,9 @@ int main(){
 							 isoc_in_cb,
 							 NULL,
 							 0);
+
 	libusb_set_iso_packet_lengths(endpoint[ISOC_IN_IDX], 1);
+
 	libusb_fill_iso_transfer(endpoint[ISOC_OUT_IDX],
 							 imu_handle,
 							 ISOC_OUT_EP,

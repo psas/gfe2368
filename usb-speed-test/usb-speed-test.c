@@ -175,7 +175,7 @@ void GPIO_isr(){
 
 		if(mode & BULK_REQ)
 			USBHwEPWrite(BULK_IN_EP, &sig, 1);
-			break;
+
 		if(mode & ISOC_REQ)
 			USBHwEPWrite(ISOC_IN_EP, &sig, 1);
 	}

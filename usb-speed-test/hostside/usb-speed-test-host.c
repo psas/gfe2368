@@ -96,7 +96,7 @@ gboolean is_imu_device(libusb_device * device){
 }
 
 void common_in_cb(struct libusb_transfer *transfer){
-	unsigned char *buf = libusb_get_iso_packet_buffer_simple(transfer, 0);
+	unsigned char *buf = transfer->buffer;
 
 	//int retErr;
 	int i;
@@ -204,7 +204,7 @@ void bulk_out_cb(struct libusb_transfer *transfer){
 	}
 }
 void isoc_in_cb(struct libusb_transfer *transfer){
-	unsigned char *buf = transfer->buffer;
+	unsigned char *buf = libusb_get_iso_packet_buffer_simple(transfer, 0);
 	//int retErr;
 	int i;
 	int bytes_written;

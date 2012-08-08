@@ -174,39 +174,45 @@ libusbSource * libusb_source_new(libusb_context * context){
 	return usb_source;
 }
 
-libusb_device_handle * open_usb_device_handle(libusb_context * context,
-    is_device is_device, int * iface_num, int num_ifaces){
-
-    libusb_device **list = NULL;
+libusb_device * find_usb_device(libusb_context * context, is_device is_device){
+	libusb_device **list = NULL;
 	libusb_device *found = NULL;
-	libusb_device_handle *handle = NULL;
 	ssize_t num_usb_dev = 0;
 	ssize_t i = 0;
-	int retErr = 0;
-	int kd_stat = 0;
 
 	num_usb_dev = libusb_get_device_list(context, &list);
 	if(num_usb_dev < 0){
 		print_libusb_error(num_usb_dev, "Could not get device list");
-		goto oudh_err1;
+		return NULL;
 	}
-    //look through the list for the device matching is_device
+	//look through the list for the device matching is_device
 	for(i = 0; i < num_usb_dev; ++i){
 		if(is_device(list[i]) == TRUE){
 			found = list[i];
+			libusb_ref_device(found);
 			break;
 		}
 	}
-
 	if(!found){
 		fprintf(stderr, "Device not found\n");
-		goto oudh_err2;
 	}
 
-	retErr = libusb_open(found, &handle);
+	libusb_free_device_list(list, 1);
+	return found;
+}
+
+
+libusb_device_handle * open_device_interface(libusb_device * dev, int * iface_num, int num_ifaces){
+	libusb_device_handle *handle = NULL;
+	int i = 0;
+	int retErr = 0;
+	int kd_stat = 0;
+	if(!dev)
+		return NULL;
+	retErr = libusb_open(dev, &handle);
 	if(retErr){
 		print_libusb_error(retErr, "Could not open device");
-		goto oudh_err2;
+		return NULL;
 	}
 	//claim requested interfaces on the device
 	for(i=0; i < num_ifaces; ++i){
@@ -214,35 +220,36 @@ libusb_device_handle * open_usb_device_handle(libusb_context * context,
 		kd_stat = libusb_kernel_driver_active(handle, iface_num[i]);
 		if(kd_stat < 0){
 			print_libusb_error(kd_stat,"Failure finding kernel driver status");
-			goto oudh_err3;
+			libusb_close(handle);
+			return NULL;
 		}
-		if(kd_stat > 0){ //if the kernel driver is active (kd_stat = 1)
+		if(kd_stat > 0){ //the kernel driver is active (kd_stat = 1)
 			retErr = libusb_detach_kernel_driver(handle, iface_num[i]);
 			if(retErr){
 				print_libusb_error(retErr, "Could not detach kernel driver");
-				goto oudh_err3;
+				libusb_close(handle);
+				return NULL;
 			}
 		}
 
 		retErr = libusb_claim_interface(handle, iface_num[i]);
 		if(retErr){
 			print_libusb_error(retErr, "Could not claim device interface");
-			goto oudh_err4;
+			libusb_attach_kernel_driver(handle, iface_num[i]);
+			libusb_close(handle);
+			return NULL;
 		}
 	}
 
-	libusb_free_device_list(list, 1);
 	return handle;
+}
 
-//clean up on error
-oudh_err4:
-	libusb_attach_kernel_driver(handle, iface_num[i]);
-oudh_err3:
-	libusb_close(handle);
-oudh_err2:
-	libusb_free_device_list(list, 1);
-oudh_err1:
-	return NULL;
+libusb_device_handle * open_usb_device_handle(libusb_context * context,
+    is_device is_device, int * iface_num, int num_ifaces)
+{
+	libusb_device * dev =  find_usb_device(context, is_device);
+	return open_device_interface(dev, iface_num,num_ifaces);
+
 }
 
 void print_libusb_error(int libusberrno, char* str) {

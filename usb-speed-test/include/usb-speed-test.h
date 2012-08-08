@@ -29,6 +29,7 @@ static void USBIntHandler(void) __attribute__ ((interrupt("IRQ")));
 #define LE_WORD(x)              ((x)&0xFF),((x)>>8)
 
 #define USB_TEST_IN 16
+//#define USB_TEST_IN 29
 #define USB_TEST_OUT 17
 
 
@@ -53,17 +54,17 @@ static const uint8_t abDescriptors[] = {
     // configuration descriptor
     0x09,
     DESC_CONFIGURATION,
-    LE_WORD(67),                        // wTotalLength       todo: set correctly
-    0x04,                               // bNumInterfaces
+    LE_WORD(60),                        // wTotalLength
+    0x01,                               // bNumInterfaces
     0x01,                               // bConfigurationValue
     0x00,                               // iConfiguration
     0x80,                               // bmAttributes
-    0xFF,                               // bMaxPower          todo: how much do I actually use?
+    0xF0,                               // bMaxPower          todo: how much do I actually use?
 
     // test interface
 	0x09,
 	DESC_INTERFACE,
-	0x01,                               // bInterfaceNumber
+	0x00,                               // bInterfaceNumber
 	0x00,                               // bAlternateSetting
 	0x06,                               // bNumEndPoints
 	0xff,                               // bInterfaceClass
@@ -76,7 +77,7 @@ static const uint8_t abDescriptors[] = {
     DESC_ENDPOINT,
     INTR_IN_EP,                          // bEndpointAddress
     0x03,                                // bmAttributes = interrupt
-    LE_WORD(1),           				 // wMaxPacketSize
+    LE_WORD(MAX_PACKET_SIZE),			 // wMaxPacketSize
     0x01,                                // bInterval
 
     // interrupt EP out
@@ -84,7 +85,7 @@ static const uint8_t abDescriptors[] = {
     DESC_ENDPOINT,
     INTR_OUT_EP,                         // bEndpointAddress
     0x03,                                // bmAttributes = interrupt
-    LE_WORD(1),            				 // wMaxPacketSize
+    LE_WORD(MAX_PACKET_SIZE),            				 // wMaxPacketSize
     0x01,                                // bInterval
 
 	// bulk EP in
@@ -92,7 +93,7 @@ static const uint8_t abDescriptors[] = {
     DESC_ENDPOINT,
     BULK_IN_EP,                          // bEndpointAddress
     0x02,                                // bmAttributes = bulk
-    LE_WORD(1),            				 // wMaxPacketSize
+    LE_WORD(MAX_PACKET_SIZE),            				 // wMaxPacketSize
     0x00,                                // bInterval
 
     // bulk EP out
@@ -100,7 +101,7 @@ static const uint8_t abDescriptors[] = {
     DESC_ENDPOINT,
     BULK_OUT_EP,                         // bEndpointAddress
     0x02,                                // bmAttributes = bulk
-    LE_WORD(1),          			     // wMaxPacketSize
+    LE_WORD(MAX_PACKET_SIZE),          			     // wMaxPacketSize
     0x00,                                // bInterval
 
 	// isochronous EP in

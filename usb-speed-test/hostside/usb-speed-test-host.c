@@ -14,8 +14,8 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <libusb-1.0/libusb.h>
-#include <glib-2.0/glib.h>
+#include <libusb.h>
+#include <glib.h>
 #include <time.h>
 #include <poll.h>
 
@@ -25,9 +25,9 @@
 #include <errno.h>   /* Error number definitions */
 #include <termios.h> /* POSIX terminal control definitions */
 
-#include "include/usb-speed-test-host.h"
-#include "include/libusb-gsource.h"
-#include "include/imu-device-host-interface.h"
+#include "usb-speed-test-host.h"
+#include "libusb-gsource.h"
+#include "imu-device-host-interface.h"
 
 //todo: thread safe?
 //todo: handle all the errors
@@ -67,11 +67,12 @@
 
 #define MAX_PACKET_SIZE 		64
 
-#define CTRL_REQ 1
-#define INTR_REQ 2
-#define BULK_REQ 3
-#define ISOC_REQ 4
-#define STOPPED  0
+#define STOPPED  0x00
+#define CTRL_REQ 0x01
+#define INTR_REQ 0x02
+#define BULK_REQ 0x04
+#define ISOC_REQ 0x08
+#define READ_DATA 0x10
 
 struct libusb_transfer * endpoint[NUM_EPS];
 
@@ -95,7 +96,8 @@ gboolean is_imu_device(libusb_device * device){
 }
 
 void common_in_cb(struct libusb_transfer *transfer){
-	unsigned char *buf = transfer->buffer;
+	unsigned char *buf = libusb_get_iso_packet_buffer_simple(transfer, 0);
+
 	//int retErr;
 	int i;
 	int bytes_written;
@@ -104,6 +106,7 @@ void common_in_cb(struct libusb_transfer *transfer){
 	case LIBUSB_TRANSFER_COMPLETED:
 		for(i = 0; i < transfer->actual_length; ++i){
 			if(buf[i] == 'A'){
+//				printf("U\n");
 				bytes_written = write(sfd, "U", 1);
 				if (bytes_written == -1){
 					   perror("Unable to write to ttyS0");
@@ -162,6 +165,9 @@ void ctrl_out_cb(struct libusb_transfer *transfer){
 
 	switch(sent->bRequest){
 	case CTRL_REQ:
+		libusb_fill_control_setup(endpoint[CTRL_IN_IDX]->buffer,
+			LIBUSB_RECIPIENT_OTHER | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_ENDPOINT_IN,
+			READ_DATA, 0, 0, 1);
 		libusb_submit_transfer(endpoint[CTRL_IN_IDX]);
 		break;
 	case INTR_REQ:
@@ -198,7 +204,33 @@ void bulk_out_cb(struct libusb_transfer *transfer){
 	}
 }
 void isoc_in_cb(struct libusb_transfer *transfer){
-	common_in_cb(transfer);
+	unsigned char *buf = transfer->buffer;
+	//int retErr;
+	int i;
+	int bytes_written;
+
+	switch(transfer->status){
+	case LIBUSB_TRANSFER_COMPLETED:
+		for(i = 0; i < transfer->actual_length; ++i){
+			if(buf[i] == 'A'){
+//				printf("U\n");
+				bytes_written = write(sfd, "U", 1);
+				if (bytes_written == -1){
+					   perror("Unable to write to ttyS0");
+				}
+			}
+		}
+		libusb_submit_transfer(transfer);
+		break;
+	case LIBUSB_TRANSFER_CANCELLED:
+		//do nothing.
+		break;
+	default:
+		print_libusb_transfer_error(transfer->status, "bulk_in_cb");
+		printf("quit bulk_in\n");
+		g_main_loop_quit(edfc_main);
+		break;
+	}
 }
 void isoc_out_cb(struct libusb_transfer *transfer){
 	if(transfer->status != LIBUSB_TRANSFER_COMPLETED){
@@ -214,6 +246,7 @@ gboolean read_g_stdin(GIOChannel * source, GIOCondition condition, gpointer data
 	gsize bytes_read = 0;
 	gsize terminator_pos = 0;
 	GError * error = NULL;
+	int i;
 
 	if(condition & ~(G_IO_IN | G_IO_ERR | G_IO_HUP)){
 		printf("**Unknown GIOCondition\n");
@@ -260,15 +293,30 @@ gboolean read_g_stdin(GIOChannel * source, GIOCondition condition, gpointer data
 			libusb_submit_transfer(ctrl_out);
 			break;
 		case 'p':
+			libusb_fill_control_setup(ctrl_out->buffer,
+					LIBUSB_RECIPIENT_OTHER | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_ENDPOINT_OUT,
+					STOPPED, 0, 0, 0);
+			libusb_submit_transfer(ctrl_out);
+
+			for(i = 0; i < NUM_EPS; ++i){
+				if(endpoint[i]){
+					libusb_cancel_transfer(endpoint[i]);
+				}
+			}
+			printf("\npaused\n");
+			break;
 		case 'q':
 			libusb_fill_control_setup(ctrl_out->buffer,
 					LIBUSB_RECIPIENT_OTHER | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_ENDPOINT_OUT,
 					STOPPED, 0, 0, 0);
 			libusb_submit_transfer(ctrl_out);
+
+			for(i = 0; i < NUM_EPS; ++i){
+				if(endpoint[i]){
+					libusb_cancel_transfer(endpoint[i]);
+				}
+			}
 			printf("\nquit\n");
-			//todo: send stop to IMU?
-//			libusb_cancel_transfer(bulk_in);
-//			libusb_cancel_transfer(bulk_out);
 			g_main_loop_quit(edfc_main);
 			break;
 		default:
@@ -299,14 +347,45 @@ int open_port(void){
   return (fd);
 }
 
+struct libusb_transfer * allocate_default_transfer(libusb_device_handle * handle,
+		struct libusb_endpoint_descriptor * ep, libusb_transfer_cb_fn callback)
+{
+	unsigned char * buf = malloc(ep->wMaxPacketSize);;
+	struct libusb_transfer * transfer = libusb_alloc_transfer(0);
+
+	transfer->dev_handle = handle;
+	transfer->flags = LIBUSB_TRANSFER_FREE_BUFFER;
+	transfer->endpoint = ep->bEndpointAddress;
+	transfer->type = ep->bmAttributes & 0x03;
+
+	switch(ep->bmAttributes & 0x03){
+	case LIBUSB_TRANSFER_TYPE_ISOCHRONOUS:
+	case LIBUSB_TRANSFER_TYPE_INTERRUPT:
+	case LIBUSB_TRANSFER_TYPE_BULK:
+
+		break;
+	default:
+		break;
+	}
+	transfer->timeout = 0; //todo: interrupt transfers?
+	transfer->length = ep->wMaxPacketSize;
+	transfer->callback = callback;
+	transfer->user_data = NULL;
+	transfer->buffer = buf;
+
+	return transfer;
+}
+
 int main(){
+	char in;
 	int usbErr = 0;
 	int iface_nums[NUM_IFACES];
-	iface_nums[0]= 1; // bulk interface
+	iface_nums[0]= 0; // test interface
 	libusb_context *imu_host = NULL;
 	libusb_device_handle *imu_handle = NULL;
 	libusbSource * usb_source = NULL;
 	//ssize_t bytes_written = 0;
+	struct termios attrib;
 
 	unsigned char * ctrl_in_buffer = NULL;
 	unsigned char * ctrl_out_buffer = NULL;
@@ -323,6 +402,9 @@ int main(){
 	GSource * gs_stdin = NULL;
 
 	sfd = open_port();
+	tcgetattr(sfd, &attrib);
+	cfsetispeed(&attrib, B115200);
+	tcsetattr(sfd, TCSANOW, &attrib);
 
 	//initialize libusb
 	usbErr = libusb_init(&imu_host);
@@ -335,12 +417,19 @@ int main(){
 	g_source_set_callback((GSource*) usb_source, (GSourceFunc)libusb_mainloop_error_cb, &edfc_main, NULL);
 
 	//get the usb device
-	imu_handle = open_usb_device_handle(imu_host, is_imu_device, iface_nums, NUM_IFACES);
-	if(!imu_handle){
-		printf("**imu_handle acquisition error\n");
-		libusb_exit(imu_host);
-		exit(EXIT_FAILURE);
-	}
+	do{
+		imu_handle = open_usb_device_handle(imu_host, is_imu_device, iface_nums, NUM_IFACES);
+		if(!imu_handle){
+			printf("**imu_handle acquisition error, retry (y/n)?\n");
+			in = getchar();
+			while(getchar() != '\n');
+			if(in != 'y'){
+				printf("quitting\n");
+				libusb_exit(imu_host);
+				exit(EXIT_FAILURE);
+			}
+		}
+	}while(!imu_handle);
 
 	//allocate and default fill transfers
 	endpoint[CTRL_IN_IDX]  = libusb_alloc_transfer(0);
@@ -378,7 +467,7 @@ int main(){
 								   imu_handle,
 								   INTR_IN_EP,
 								   intr_in_buffer,
-								   1,
+								   MAX_PACKET_SIZE,
 								   intr_in_cb,
 								   NULL,
 								   0);
@@ -395,7 +484,7 @@ int main(){
 							  imu_handle,
 							  BULK_IN_EP,
 							  bulk_in_buffer,
-							  1,
+							  MAX_PACKET_SIZE,
 							  bulk_in_cb,
 							  NULL,
 							  0);
@@ -412,11 +501,12 @@ int main(){
 							 imu_handle,
 							 ISOC_IN_EP,
 							 isoc_in_buffer,
-							 1,
+							 MAX_PACKET_SIZE,
 							 1,
 							 isoc_in_cb,
 							 NULL,
 							 0);
+	libusb_set_iso_packet_lengths(endpoint[ISOC_IN_IDX], 1);
 	libusb_fill_iso_transfer(endpoint[ISOC_OUT_IDX],
 							 imu_handle,
 							 ISOC_OUT_EP,
@@ -466,11 +556,13 @@ int main(){
 	g_main_loop_unref(edfc_main);
 	g_main_context_unref(edfc_context);
 
+	//todo: release all interfaces
 	usbErr = libusb_release_interface(imu_handle, iface_nums[0]);
 	if(usbErr) print_libusb_error(usbErr, "exit libusb_release_interface");
 	usbErr = libusb_attach_kernel_driver(imu_handle, iface_nums[0]);
 	if(usbErr) print_libusb_error(usbErr, "exit libusb_attach_kernel_driver");
 	libusb_close(imu_handle);
+	 //todo: deref device
 	libusb_exit(imu_host);
 
 	exit(EXIT_SUCCESS);

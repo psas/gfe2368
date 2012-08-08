@@ -74,7 +74,10 @@
 #define ISOC_REQ 0x08
 #define READ_DATA 0x10
 
+#define R_ISOC 8
 struct libusb_transfer * endpoint[NUM_EPS];
+struct libusb_transfer * isoc_out_multi[R_ISOC];
+
 
 GMainLoop * edfc_main = NULL; //todo:ugg, need better data flow
 int sfd;
@@ -113,6 +116,7 @@ void common_in_cb(struct libusb_transfer *transfer){
 				}
 			}
 		}
+		libusb_submit_transfer(endpoint[BULK_OUT_IDX]);
 		libusb_submit_transfer(transfer);
 		break;
 	case LIBUSB_TRANSFER_CANCELLED:
@@ -157,6 +161,7 @@ void ctrl_in_cb(struct libusb_transfer *transfer){
 }
 void ctrl_out_cb(struct libusb_transfer *transfer){
 	struct libusb_control_setup * sent = libusb_control_transfer_get_setup(transfer);
+	int i;
 	if(transfer->status != LIBUSB_TRANSFER_COMPLETED){
 		print_libusb_transfer_error(transfer->status, "bulk_out_cb");
 		printf("quit bulk_out\n");
@@ -177,7 +182,8 @@ void ctrl_out_cb(struct libusb_transfer *transfer){
 		libusb_submit_transfer(endpoint[BULK_IN_IDX]);
 		break;
 	case ISOC_REQ:
-		libusb_submit_transfer(endpoint[ISOC_IN_IDX]);
+		for(i = 0; i < R_ISOC; ++i)
+			libusb_submit_transfer(isoc_out_multi[i]);
 		break;
 	default:
 		break;
@@ -221,7 +227,7 @@ void isoc_in_cb(struct libusb_transfer *transfer){
 			}
 		}
 		libusb_submit_transfer(transfer);
-		libusb_submit_transfer(endpoint[BULK_OUT_EP]);
+		//libusb_submit_transfer(endpoint[BULK_OUT_EP]);
 		break;
 	case LIBUSB_TRANSFER_CANCELLED:
 		//do nothing.
@@ -387,6 +393,7 @@ int main(){
 	libusbSource * usb_source = NULL;
 	//ssize_t bytes_written = 0;
 	struct termios attrib;
+	int i;
 
 	unsigned char * ctrl_in_buffer = NULL;
 	unsigned char * ctrl_out_buffer = NULL;
@@ -397,6 +404,7 @@ int main(){
 	unsigned char * isoc_in_buffer = NULL;
 	unsigned char * isoc_out_buffer = NULL;
 
+	unsigned char * isoc_mulit_xfer[R_ISOC] = {NULL};
 
 	GMainContext * edfc_context = NULL;
 	GIOChannel * g_stdin = NULL;
@@ -441,6 +449,7 @@ int main(){
 	endpoint[BULK_OUT_IDX] = libusb_alloc_transfer(0);
 	endpoint[ISOC_IN_IDX]  = libusb_alloc_transfer(1);
 	endpoint[ISOC_OUT_IDX] = libusb_alloc_transfer(1);
+
 	//todo: slice allocate?
 	ctrl_in_buffer  = calloc(MAX_PACKET_SIZE + LIBUSB_CONTROL_SETUP_SIZE, sizeof(unsigned char));
 	ctrl_out_buffer = calloc(MAX_PACKET_SIZE + LIBUSB_CONTROL_SETUP_SIZE, sizeof(unsigned char));
@@ -519,6 +528,22 @@ int main(){
 							 isoc_out_cb,
 							 NULL,
 							 0);
+
+	for(i = 0; i < R_ISOC; ++i){
+		isoc_out_multi[i] = libusb_alloc_transfer(1);
+		isoc_mulit_xfer[i]  = calloc(MAX_PACKET_SIZE, sizeof(unsigned char));
+		libusb_fill_iso_transfer(isoc_out_multi[i],
+								 imu_handle,
+								 ISOC_IN_EP,
+								 isoc_mulit_xfer[i],
+								 MAX_PACKET_SIZE,
+								 1,
+								 isoc_in_cb,
+								 NULL,
+								 0);
+
+		libusb_set_iso_packet_lengths(isoc_out_multi[i], 1);
+	}
 
 	edfc_context = g_main_context_new(); //edfc == event driven flight computer
 	edfc_main = g_main_loop_new(edfc_context, FALSE);

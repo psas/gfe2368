@@ -69,6 +69,7 @@ static inline void ToggleUSBTestOut(){
 
 
 static void Bulk(uint8_t bEP, uint8_t bEPStatus){
+	uint8_t inbuf[MAX_PACKET_SIZE];
 	switch(bEP){
 	case BULK_IN_EP:
 		//color_led_flash(1, RED_LED, FLASH_FAST);
@@ -81,6 +82,8 @@ static void Bulk(uint8_t bEP, uint8_t bEPStatus){
 		if(bEPStatus & EP_STATUS_NACKED){
 			ToggleUSBTestOut();
 	    }
+
+		USBHwEPRead(bEP, inbuf, MAX_PACKET_SIZE);
 		break;
 	default:
 		break;
@@ -122,7 +125,7 @@ static BOOL HandleVendorRequest(TSetupPacket *pSetup, int *piLen, uint8_t **ppbD
 		//host-to-device
 		if(pSetup->bRequest == STOPPED)
 			mode = STOPPED;
-		mode |= pSetup->bRequest;
+		mode = pSetup->bRequest;
 	}
 
 	return TRUE;
@@ -176,7 +179,7 @@ void GPIO_isr(){
 		if(mode & BULK_REQ)
 			USBHwEPWrite(BULK_IN_EP, &sig, 1);
 
-		if(mode & ISOC_REQ)
+		if(mode == ISOC_REQ)
 			USBHwEPWrite(ISOC_IN_EP, &sig, 1);
 	}
 	VICAddress = 0x0;

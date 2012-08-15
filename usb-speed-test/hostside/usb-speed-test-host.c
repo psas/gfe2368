@@ -383,7 +383,7 @@ struct libusb_transfer * allocate_default_transfer(libusb_device_handle * handle
 	return transfer;
 }
 
-int main(){
+int main(int argc, char *argv[]){
 	char in;
 	int usbErr = 0;
 	int iface_nums[NUM_IFACES];
@@ -405,10 +405,11 @@ int main(){
 	unsigned char * isoc_out_buffer = NULL;
 
 	unsigned char * isoc_mulit_xfer[R_ISOC] = {NULL};
+	struct libusb_transfer * ctrl_out = NULL;
 
 	GMainContext * edfc_context = NULL;
-	GIOChannel * g_stdin = NULL;
-	GSource * gs_stdin = NULL;
+	//GIOChannel * g_stdin = NULL;
+	//GSource * gs_stdin = NULL;
 
 	sfd = open_port();
 	tcgetattr(sfd, &attrib);
@@ -547,22 +548,44 @@ int main(){
 
 	edfc_context = g_main_context_new(); //edfc == event driven flight computer
 	edfc_main = g_main_loop_new(edfc_context, FALSE);
-
-	g_stdin = g_io_channel_unix_new(fileno(stdin));
-	if(!g_stdin){
-		printf("error creating g_stdin\n");
-	}
 	g_source_attach((GSource*) usb_source, edfc_context);
-	gs_stdin = g_io_create_watch(g_stdin, G_IO_IN | G_IO_ERR | G_IO_HUP);
-	g_source_set_callback(gs_stdin, (GSourceFunc)read_g_stdin, endpoint, NULL);
-	g_source_attach(gs_stdin, edfc_context);
 
 	printf("beginning main loop\n");
+
+	ctrl_out = endpoint[CTRL_OUT_IDX];
+	if (!strcmp(argv[0], "-c")){
+		libusb_fill_control_setup(ctrl_out->buffer,
+				LIBUSB_RECIPIENT_OTHER | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_ENDPOINT_OUT,
+				CTRL_REQ, 0, 0, 0);
+		libusb_submit_transfer(ctrl_out);
+	}else
+	if (!strcmp(argv[0], "-i")){
+		libusb_fill_control_setup(ctrl_out->buffer,
+				LIBUSB_RECIPIENT_OTHER | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_ENDPOINT_OUT,
+				INTR_REQ, 0, 0, 0);
+		libusb_submit_transfer(ctrl_out);
+	}else
+	if (!strcmp(argv[0], "-b")){
+		libusb_fill_control_setup(ctrl_out->buffer,
+				LIBUSB_RECIPIENT_OTHER | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_ENDPOINT_OUT,
+				BULK_REQ, 0, 0, 0);
+		libusb_submit_transfer(ctrl_out);
+	}else
+	if (!strcmp(argv[0], "-s")){
+		libusb_fill_control_setup(ctrl_out->buffer,
+				LIBUSB_RECIPIENT_OTHER | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_ENDPOINT_OUT,
+				ISOC_REQ, 0, 0, 0);
+		libusb_submit_transfer(ctrl_out);
+	}else{
+		fprintf(stderr, "UNKNOWN COMMAND\n");
+		//todo: cleanup
+		exit(0);
+	}
+
 	g_main_loop_run(edfc_main);
 	printf("main loop finished\n");
 //cleanup
-	g_source_destroy(gs_stdin);
-	g_io_channel_shutdown(g_stdin, TRUE, NULL); //todo: fix null
+
 	free(ctrl_in_buffer);
 	free(ctrl_out_buffer);
 	free(intr_in_buffer);

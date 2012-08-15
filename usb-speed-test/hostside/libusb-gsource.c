@@ -153,8 +153,8 @@ static int init_usb_fds(libusbSource * usb_source){
 
 //todo: does this name confuse with libusb funcs?
 libusbSource * libusb_source_new(libusb_context * context){
-	static GSourceFuncs usb_funcs = {prepare, check, dispatch, finalize}; //todo is static enough or
-	if(!libusb_pollfds_handle_timeouts(context)){                         //or should I malloc
+	static GSourceFuncs usb_funcs = {prepare, check, dispatch, finalize};
+	if(!libusb_pollfds_handle_timeouts(context)){
 		usb_funcs.prepare = alt_prepare;
 	}
 

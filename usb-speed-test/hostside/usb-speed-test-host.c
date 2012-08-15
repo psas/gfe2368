@@ -553,25 +553,25 @@ int main(int argc, char *argv[]){
 	printf("beginning main loop\n");
 
 	ctrl_out = endpoint[CTRL_OUT_IDX];
-	if (!strcmp(argv[0], "-c")){
+	if (!strcmp(argv[1], "-c")){
 		libusb_fill_control_setup(ctrl_out->buffer,
 				LIBUSB_RECIPIENT_OTHER | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_ENDPOINT_OUT,
 				CTRL_REQ, 0, 0, 0);
 		libusb_submit_transfer(ctrl_out);
 	}else
-	if (!strcmp(argv[0], "-i")){
+	if (!strcmp(argv[1], "-i")){
 		libusb_fill_control_setup(ctrl_out->buffer,
 				LIBUSB_RECIPIENT_OTHER | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_ENDPOINT_OUT,
 				INTR_REQ, 0, 0, 0);
 		libusb_submit_transfer(ctrl_out);
 	}else
-	if (!strcmp(argv[0], "-b")){
+	if (!strcmp(argv[1], "-b")){
 		libusb_fill_control_setup(ctrl_out->buffer,
 				LIBUSB_RECIPIENT_OTHER | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_ENDPOINT_OUT,
 				BULK_REQ, 0, 0, 0);
 		libusb_submit_transfer(ctrl_out);
 	}else
-	if (!strcmp(argv[0], "-s")){
+	if (!strcmp(argv[1], "-s")){
 		libusb_fill_control_setup(ctrl_out->buffer,
 				LIBUSB_RECIPIENT_OTHER | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_ENDPOINT_OUT,
 				ISOC_REQ, 0, 0, 0);

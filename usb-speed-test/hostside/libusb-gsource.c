@@ -5,12 +5,12 @@
  *      Author: theo
  */
 
-#include <libusb-1.0/libusb.h>
-#include <glib-2.0/glib.h>
+#include <libusb.h>
 #include <time.h>
 #include <poll.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "libusb-gsource.h"
 
@@ -18,9 +18,7 @@
 //todo: are there error types I can handle here?
 //todo: multithread libusb_handle_events_timeout_completed
 
-static gboolean prepare(GSource *g_source, gint *timeout_)
-{
-	libusbSource *usb_src = (libusbSource *)g_source;
+static int prepare(libusbSource *usb_src, int *timeout_){
 	struct timeval timeout;
     int retval = libusb_get_next_timeout(usb_src->context, &timeout);
     switch(retval){
@@ -28,7 +26,7 @@ static gboolean prepare(GSource *g_source, gint *timeout_)
 			*timeout_ = -1;
 			return FALSE;
 		case 1:
-			*timeout_  =  timeout.tv_sec*1000 + timeout.tv_usec/1000; //wait at most timeout, rounded down to nearest msec
+			*timeout_  =  timeout.tv_sec*1000 + timeout.tv_usec/1000;
 			return *timeout_ == 0 ? TRUE : FALSE;
 		default:
 			usb_src->timeout_error = retval;
@@ -37,141 +35,125 @@ static gboolean prepare(GSource *g_source, gint *timeout_)
     return FALSE;
 }
 
-static gboolean alt_prepare(GSource *g_source, gint *timeout_){
+static int alt_prepare(libusbSource *usb_src, int *timeout_){
 	*timeout_ = -1;
 	return FALSE;
 }
 
-static gboolean check(GSource *g_source)
-{
-	libusbSource *usb_src = (libusbSource *)g_source;
-	GSList * elem = usb_src->fds;
-	GPollFD * g_usb_fd = NULL;
-
-	if(!elem)
+static int check(libusbSource *usb_src){
+	int i;
+	if(usb_src->fds)
 		return FALSE;
 
-	do{
-		g_usb_fd = elem->data;
-		if(g_usb_fd->revents)
+	for(i = 0; i < usb_src->nfds; ++i)
+		if(usb_src->fds[i].revents)
 			return TRUE;
-	}while((elem = g_slist_next(elem)));
 
 	return FALSE;
 }
 
-static gboolean dispatch(GSource *g_source, GSourceFunc callback, gpointer user_data)
-{
-	// from some random bit of code on the interwebs:
-	// If Dispatch returns FALSE, GLib will destroy the source.
-	// src.chromium.org/svn/trunk/src/base/message_pump_glib.cc
-
-	libusbSource *usb_src = (libusbSource *)g_source;
-	libusbSourceErrorCallback errCB = (libusbSourceErrorCallback)callback;
-	GMainLoop *loop = (GMainLoop*)user_data; //can I verify that this is a gmainloop?
+static int dispatch(libusbSource *usb_src, libusbSourceErrorCB errCB, void* user_data){
 	struct timeval nonblocking = {
 			.tv_sec = 0,
 			.tv_usec = 0,
 	};
 
 	if(usb_src->timeout_error && errCB != NULL){
-		errCB(usb_src->timeout_error, 0, loop);
+		errCB(usb_src->timeout_error, 0);
 		return TRUE;
 	}
 
 	usb_src->handle_events_error = libusb_handle_events_timeout(usb_src->context, &nonblocking);
 	if(usb_src->handle_events_error && errCB != NULL)
-		errCB(0, usb_src->handle_events_error, loop);
+		errCB(0, usb_src->handle_events_error);
     return TRUE;
 }
 
-static void finalize(GSource *g_source){
-	libusbSource * usb_src = (libusbSource*)g_source;
-	GSList * elem = usb_src->fds;
-	GPollFD * g_usb_fd = NULL;
+static void usb_fd_add(int fd, short events, void * source){
+	if(source==NULL)
+		return;
 
-	if(elem){
-		do{
-			g_usb_fd = elem->data;
-			g_source_remove_poll(g_source, g_usb_fd);
-			g_slice_free(GPollFD, g_usb_fd);
-		}while((elem = g_slist_next(elem)));
-	}
-	g_slist_free(usb_src->fds);
+	libusbSource * usb_src = (libusbSource *)source;
+	++usb_src->nfds;
+	usb_src->fds = realloc(usb_src->fds, sizeof(struct pollfd)*(usb_src->nfds));
+	usb_src->fds[usb_src->nfds].fd = fd;
+	usb_src->fds[usb_src->nfds].events = events;
+	usb_src->fds[usb_src->nfds].revents = 0;
+
 }
 
-static void usb_fd_added_cb(int fd, short events, void * source){
+static void usb_fd_remove(int fd, void* source){
+	if(source == NULL)
+		return;
+
 	libusbSource * usb_src = (libusbSource *)source;
-	GPollFD * g_usb_fd = g_slice_new0(GPollFD);
+	struct pollfd * temp_fds = NULL;
+	int i, rm_fd;
 
-	g_usb_fd->fd = fd;
-	if (events & POLLIN)
-			g_usb_fd->events |= G_IO_IN;
-	if (events & POLLOUT)
-			g_usb_fd->events |= G_IO_OUT;
-
-	usb_src->fds = g_slist_prepend(usb_src->fds, g_usb_fd);
-	g_source_add_poll((GSource *)usb_src, g_usb_fd);
-}
-
-static void usb_fd_removed_cb(int fd, void* source){
-	libusbSource * usb_src = (libusbSource *)source;
-	GSList * elem = usb_src->fds;
-	GPollFD * g_usb_fd = NULL;
-	if(g_source_is_destroyed((GSource*)source)){
-		return; //finalize has already been run //todo: check if source is destroyed everywhere
-	}
-
-	if(!elem)
-		return; //error? asked to remove an fd that wasn't being used in a poll
-
-	do{
-		g_usb_fd = elem->data;
-		if(g_usb_fd->fd == fd){
-			g_source_remove_poll((GSource*)source, g_usb_fd);
-			g_slice_free(GPollFD, g_usb_fd);
-			usb_src->fds = g_slist_delete_link(usb_src->fds, elem);
+	//find if the fd to be removed is in the source fd array
+	for(rm_fd = 0; rm_fd < usb_src->nfds; ++rm_fd){
+		if(usb_src->fds[rm_fd].fd == fd)
 			break;
+	}
+	if(rm_fd == usb_src->nfds)
+		return; //fd was not in the array
+
+	//remove the fd
+	if(--usb_src->nfds > 0){
+		temp_fds = malloc(sizeof(struct pollfd)*(usb_src->nfds));
+		for(i = 0; i < usb_src->nfds; ++i){
+			if(i < rm_fd)
+				temp_fds[i] = usb_src->fds[i];
+			else
+				temp_fds[i] = usb_src->fds[i+1];
 		}
-	}while((elem = g_slist_next(elem)));
+	}
+	free(usb_src->fds);
+	usb_src->fds = temp_fds;
 }
 
 static int init_usb_fds(libusbSource * usb_source){
-	int numfds = 0;
+	nfds_t numfds;
 	const struct libusb_pollfd ** usb_fds = libusb_get_pollfds(usb_source->context);
 	if(!usb_fds)
 		return -1;
 
 	for(numfds = 0; usb_fds[numfds] != NULL; ++numfds){
-		usb_fd_added_cb(usb_fds[numfds]->fd, usb_fds[numfds]->events, usb_source);
+		usb_fd_add(usb_fds[numfds]->fd, usb_fds[numfds]->events, usb_source);
 	}
-
 	free(usb_fds);
-	libusb_set_pollfd_notifiers(usb_source->context, usb_fd_added_cb, usb_fd_removed_cb, usb_source);
+	libusb_set_pollfd_notifiers(usb_source->context, usb_fd_add, usb_fd_remove, usb_source);
 	return 0;
 }
 
-//todo: does this name confuse with libusb funcs?
-libusbSource * libusb_source_new(libusb_context * context){
-	static GSourceFuncs usb_funcs = {prepare, check, dispatch, finalize};
-	if(!libusb_pollfds_handle_timeouts(context)){
-		usb_funcs.prepare = alt_prepare;
+libusbSource * libusbSource_new(libusb_context * context){
+	libusbSource * usb_source = malloc(sizeof(libusbSource));
+
+	if(libusb_pollfds_handle_timeouts(context)){
+		usb_source->prepare = prepare;
+	}else{
+		usb_source->prepare = alt_prepare;
 	}
-
-	GSource * g_usb_source = g_source_new (&usb_funcs, sizeof(libusbSource));
-	libusbSource * usb_source = (libusbSource *) g_usb_source;
-
-	usb_source->fds = NULL; //important to set null because g_source_destroy calls finalize
+	usb_source->check = check;
+	usb_source->dispatch = dispatch;
+	usb_source->fds = NULL;
+	usb_source->nfds = 0;
 	usb_source->context = context;
 	usb_source->timeout_error = 0;
 	usb_source->handle_events_error = 0;
 
 	if(init_usb_fds(usb_source)){
-		g_source_destroy((GSource*)usb_source);
+		free(usb_source);
 		return NULL;
 	}
 
 	return usb_source;
+}
+
+void libusbSource_free(libusbSource * src){
+	libusb_set_pollfd_notifiers(src->context, NULL, NULL, NULL);
+	free(src->fds);
+	free(src);
 }
 
 libusb_device * find_usb_device(libusb_context * context, is_device is_device){
@@ -201,7 +183,7 @@ libusb_device * find_usb_device(libusb_context * context, is_device is_device){
 	return found;
 }
 
-
+//todo: I dont think I'll be opening multiple interfaces very often. simplify?
 libusb_device_handle * open_device_interface(libusb_device * dev, int * iface_num, int num_ifaces){
 	libusb_device_handle *handle = NULL;
 	int i = 0;
@@ -210,6 +192,7 @@ libusb_device_handle * open_device_interface(libusb_device * dev, int * iface_nu
 	if(!dev)
 		return NULL;
 	retErr = libusb_open(dev, &handle);
+
 	if(retErr){
 		print_libusb_error(retErr, "Could not open device");
 		return NULL;
@@ -240,7 +223,6 @@ libusb_device_handle * open_device_interface(libusb_device * dev, int * iface_nu
 			return NULL;
 		}
 	}
-
 	return handle;
 }
 
@@ -248,8 +230,9 @@ libusb_device_handle * open_usb_device_handle(libusb_context * context,
     is_device is_device, int * iface_num, int num_ifaces)
 {
 	libusb_device * dev =  find_usb_device(context, is_device);
-	return open_device_interface(dev, iface_num,num_ifaces);
-
+	libusb_device_handle * handle = open_device_interface(dev, iface_num,num_ifaces);
+	libusb_unref_device(dev); //remove the ref from find_usb_device
+	return handle;
 }
 
 void print_libusb_error(int libusberrno, char* str) {

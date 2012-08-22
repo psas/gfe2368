@@ -8,22 +8,29 @@
 #ifndef LIBUSB_GSOURCE_H_
 #define LIBUSB_GSOURCE_H_
 
-typedef void (*libusbSourceErrorCallback)(int, int, GMainLoop *);
-typedef gboolean (*is_device)(libusb_device * device);
+#define TRUE  (1)
+#define FALSE (0)
+
+typedef void (*libusbSourceErrorCB)(int, int);
+typedef int (*is_device)(libusb_device * device);
+
 
 
 typedef struct libusbSource {
-	GSource source;
-	GSList * fds;
+	struct pollfd *fds;
+	nfds_t nfds;
 	int timeout_error;
 	int handle_events_error;
 	libusb_context * context;
-	//put gmainloop in libusbSource?
-} libusbSource;
+	int (*prepare)(struct libusbSource *usb_src, int *timeout_);
+	int (*check)(struct libusbSource *usb_src);
+	int (*dispatch)(struct libusbSource *usb_src, libusbSourceErrorCB errCB, void* user_data);
+}libusbSource;
 
-libusbSource * libusb_source_new(libusb_context * context);
+libusbSource * libusbSource_new(libusb_context * context);
+void libusbSource_free(libusbSource * src);
 libusb_device_handle * open_usb_device_handle(libusb_context * context,
-    is_device is_device, int * iface_num, int num_ifaces);
+		is_device is_device, int * iface_num, int num_ifaces);
 void print_libusb_error(int libusberrno, char* str);
 void print_libusb_transfer_error(int status, char* str);
 #endif /* LIBUSB_GSOURCE_H_ */

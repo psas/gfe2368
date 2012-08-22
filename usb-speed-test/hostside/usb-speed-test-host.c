@@ -96,7 +96,7 @@ void common_in_cb(struct libusb_transfer *transfer){
 				}
 			}
 		}
-		libusb_submit_transfer(endpoint[BULK_OUT_IDX]);
+		libusb_submit_transfer(endpoint[BULK_IN_IDX]);
 		libusb_submit_transfer(transfer);
 		break;
 	case LIBUSB_TRANSFER_CANCELLED:
@@ -235,7 +235,7 @@ void libusb_mainloop_error_cb(int timeout, int handle_events){
 }
 
 void open_ttyS0(){
-	int ttyS0;
+	//int ttyS0;
 	struct termios attrib;
 
 	ttyS0 = open("/dev/ttyS0", O_RDWR | O_NOCTTY);
@@ -452,11 +452,12 @@ void mainloop(){
 					}
 				}
 			}
-			free(urb);
-			free(buf);
+			//free(urb);
+			//free(buf);
+			buf[0] = 0;
 
-			urb = calloc(1, sizeof(struct usbdevfs_urb));
-			buf = calloc(MAX_PACKET_SIZE, sizeof(char));
+			//urb = calloc(1, sizeof(struct usbdevfs_urb));
+			//buf = calloc(MAX_PACKET_SIZE, sizeof(char));
 			//urb->usercontext;
 			urb->type = USBDEVFS_URB_TYPE_BULK;
 			urb->endpoint = BULK_IN_EP;
@@ -515,10 +516,10 @@ int main(int argc, char *argv[]){
 		}
 	}while(!imu_handle);
 
-    if (signal(SIGINT, termination_handler) == SIG_IGN)
-      signal(SIGINT, SIG_IGN);
+//    if (signal(SIGINT, termination_handler) == SIG_IGN)
+//      signal(SIGINT, SIG_IGN);
 
-    if(!use_ioctls)
+//   if(!use_ioctls)
     	setup_transfers(imu_handle);
 
 	printf("beginning main loop\n");

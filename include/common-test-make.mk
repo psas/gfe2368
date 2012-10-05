@@ -3,9 +3,9 @@
 # common make command for testing
 #
 
-GCC_VERSION     ?= 4.5.1
-CROSS           ?= /home/theo/.CodeSourcery/Sourcery_G++_Lite
-CROSSNAME		?= arm-none-eabi
+GCC_VERSION     ?= 4.5.2
+CROSS           ?= /opt/cross
+CROSSNAME	?= arm-elf
 
 ARMLINUXGCCLIB  := $(CROSS)/lib/gcc/$(CROSSNAME)/$(GCC_VERSION)
 ARMLINUXLIB     := $(CROSS)/$(CROSSNAME)/lib

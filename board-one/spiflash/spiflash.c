@@ -47,14 +47,18 @@ int main (void) {
 
     at45_read_id();
 
+    at45_read_id();
+
+    at45_read_id();
+
     while(1) {
-        printf_lpc(UART0,"2 SLOW flashes...red, blue then green\r\n");
+      //  printf_lpc(UART0,"2 SLOW flashes...red, blue then green\r\n");
+        at45_process_done_q();
       //  color_led_flash(2, RED_LED, FLASH_SLOW ) ;
       //  RED_LED_OFF;
       //  color_led_flash(2, BLUE_LED,  FLASH_SLOW ) ;
       //  BLUE_LED_OFF;
         color_led_flash(2, GREEN_LED, FLASH_SLOW ) ;
-        GREEN_LED_OFF;
     }
 
     return(0);

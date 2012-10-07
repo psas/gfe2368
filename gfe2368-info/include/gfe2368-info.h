@@ -4,7 +4,7 @@
  * gfe2368-info.h
  */
 
-#define MAX_BOARDTAG  50
+#define MAX_BOARDTAG  20
 
 typedef struct gfe2368_info {
     char	boardtag[MAX_BOARDTAG] ;

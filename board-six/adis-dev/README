@@ -1,0 +1,13 @@
+Development of ADIS IMU communication
+
+Currently ADIS is mounted on GFE #6. GFE #10 is
+used as a carrier during development
+
+1   Library Dev
+
+4   Theo IMU
+
+6   ADIS IMU
+
+9   Unpopulated
+10  Unpopulated

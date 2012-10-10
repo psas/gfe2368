@@ -22,7 +22,7 @@ int main (void) {
 
     pllstart_seventytwomhz() ;
     //  pllstart_sixtymhz() ;
-   // pllstart_fourtyeightmhz() ;
+   //pllstart_fourtyeightmhz() ;
 
     info_init();
 
@@ -38,26 +38,42 @@ int main (void) {
     BLUE_LED_OFF;
     GREEN_LED_OFF;
 
-    //printf_lpc(UART0,"\n*** Initialize SPI ***\r\n" );
+   // util_wait_msecs(2000);
 
+
+    adis_spi_ctl.spi_cpol_val = SPI_SCK_ACTIVE_LOW;
+    adis_spi_ctl.spi_cpha_val = SPI_SCK_SECOND_CLK;
+    adis_spi_ctl.spi_lsbf_val = SPI_DATA_MSB_FIRST;
+
+    spi_init_master_intr(CCLK_DIV1, SPI_100KHZ, &adis_spi_ctl);
+	SCK_HIGH;
+
+  //  printf_lpc(UART0, "\n*** Init pins for ADIS\r\n");
     adis_init();
-//    adis_reset();
-//
-//    spi_init_master_intr(CCLK_DIV1, SPI_100KHZ);
-//
-//    adis_read_id();
-//
-//    adis_read_id();
-//
-//    adis_read_id();
+
+  //  printf_lpc(UART0, "\n*** Reset ADIS\r\n");
+    adis_reset();
+
+  //  printf_lpc(UART0,"\n*** Initialize SPI ***\r\n" );
+
+
+  //  dummy_spi_xact();
+
+  //  adis_read_smpl_prd();
+
+     adis_read_id();
+
+     adis_read_id();
 
     while(1) {
-        printf_lpc(UART0,"2 SLOW flashes...red, blue then green\r\n");
+    	adis_process_done_q();
+       // printf_lpc(UART0,"2 SLOW flashes...red, blue then green\r\n");
+    	 printf_lpc(UART0,".");
       //  adis_process_done_q();
-       color_led_flash(2, RED_LED, FLASH_NORMAL ) ;
-        RED_LED_OFF;
-        color_led_flash(2, BLUE_LED,  FLASH_NORMAL ) ;
-        BLUE_LED_OFF;
+//       color_led_flash(2, RED_LED, FLASH_NORMAL ) ;
+//        RED_LED_OFF;
+//        color_led_flash(2, BLUE_LED,  FLASH_NORMAL ) ;
+//        BLUE_LED_OFF;
         color_led_flash(2, GREEN_LED, FLASH_NORMAL ) ;
     }
 

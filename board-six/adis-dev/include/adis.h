@@ -19,7 +19,7 @@
     MISO          (DOUT)              61           4
     MOSI          (DIN)               60           5
 
-    P0.0          (_RST)    pu=yes    46           8
+    P1.29         (_RST)    pu=yes    45           8
   P2.10/_EINT0    (DIO1)    pu=10k    53           7
   P2.11/_EINT1    (DIO2)              52           9
     P0.5          (DIO3)              80           1
@@ -36,12 +36,13 @@
 #define     P0_0_PINSEL0                    0
 #define     P0_5_PINSEL0                    10
 #define     P0_6_PINSEL0                    12
+#define     P1_29_PINSEL3                   26
 #define     P2_10_PINSEL4                   20
 #define     P2_11_PINSEL4                   22
 
-#define     PINSEL_ADIS_RESET                 (PINSEL0  = (PINSEL0  & ~(0x3 << P0_0_PINSEL0)) | (GPIO_PINSEL0   << P0_0_PINSEL0))
-#define     PINMODE_ADIS_RESET_PULLUP         (PINMODE0 = (PINMODE0 & ~(0x3 << P0_0_PINSEL0)) | (P0_PULLUP_MODE << P0_0_PINSEL0))
-#define     PINMODE_ADIS_RESET_NOPULL         (PINMODE0 = (PINMODE0 & ~(0x3 << P0_0_PINSEL0)) | (P0_NOPULL_MODE << P0_0_PINSEL0))
+#define     PINSEL_ADIS_RESET                 (PINSEL3  = (PINSEL3  & ~(0x3 << P1_29_PINSEL3)) | (GPIO_PINSEL0   << P1_29_PINSEL3))
+#define     PINMODE_ADIS_RESET_PULLUP         (PINMODE3 = (PINMODE3 & ~(0x3 << P1_29_PINSEL3)) | (P0_PULLUP_MODE << P1_29_PINSEL3))
+#define     PINMODE_ADIS_RESET_NOPULL         (PINMODE3 = (PINMODE3 & ~(0x3 << P1_29_PINSEL3)) | (P0_NOPULL_MODE << P1_29_PINSEL3))
 
 #define     PINSEL_ADIS_EINT0_DIO1          (PINSEL4  = (PINSEL4  & ~(0x3 << P2_10_PINSEL4)) | (EINT0_PINSEL4  << P2_10_PINSEL4))
 #define     PINMODE_ADIS_EINT0_DIO1_NOPULL  (PINMODE4 = (PINMODE4 & ~(0x3 << P2_10_PINSEL4)) | (P0_NOPULL_MODE << P2_10_PINSEL4))
@@ -55,15 +56,17 @@
 #define     PINSEL_ADIS_DIO4                (PINSEL0  = (PINSEL0  & ~(0x3 << P0_6_PINSEL0))  | (GPIO_PINSEL0   << P0_6_PINSEL0))
 #define     PINMODE_ADIS_DIO4_PULLUP        (PINMODE0 = (PINMODE0 & ~(0x3 << P0_6_PINSEL0))  | (P0_PULLUP_MODE << P0_6_PINSEL0))
 
-#define     FIO_ADIS_RESET                    (FIO0DIR |= (1<<0))
 
-#define     ADIS_RESET_HIGH                   (FIO0SET |= (1<<0))
-#define     ADIS_RESET_LOW                    (FIO0CLR |= (1<<0))
+#define     FIO_ADIS_RESET_OUTPUT            (FIO1DIR |= (1<<29))
 
-#define     ADIS_RST_MSECS                  4000
+#define     ADIS_RESET_HIGH                  (FIO1SET |= (1<<29))
+#define     ADIS_RESET_LOW                   (FIO1CLR |= (1<<29))
 
-#define     ADIS_IMU_LEDFLASHES             3
+#define     ADIS_RESET_MSECS                 500
 
+#define     ADIS_IMU_LEDFLASHES              3
+
+#define     ADIS_MAX_DATA_BUFFER             50
 
 // ADIS Registers
 typedef enum {
@@ -101,7 +104,7 @@ typedef enum {
 	ADIS_DIAG_STAT =0x3C,        // 0x0000  System status
 	ADIS_GLOB_CMD  =0x3E,        // 0x0000  System command
 	ADIS_ALM_MAG1  =0x40,        // 0x0000  Alarm 1 amplitude threshold
-	ADIS_ALM_MAG2  =0x42,        // 0x0000  Alarm 2 amplitude threshold
+	ADIS_ALM_MAG2  =0x42,        // 0x0000  Alarm spi_master_xact_data* caller, spi_master_xact_data* spi_xact, void* data2 amplitude threshold
 	ADIS_ALM_SMPL1 =0x44,        // 0x0000  Alarm 1 sample size
 	ADIS_ALM_SMPL2 =0x46,        // 0x0000  Alarm 2 sample size
 	ADIS_ALM_CTRL  =0x48,        // 0x0000  Alarm control
@@ -111,26 +114,32 @@ typedef enum {
 } adis_regaddr;
 
 typedef struct {
-    adis_regaddr regaddr;
-    uint8_t      num_readbytes;
+	adis_regaddr        regaddr;
+	uint8_t             cmd;
+	SPI_XACT_FnCallback cb_fn;
+    uint8_t             num_readbytes;
+    uint8_t             num_writebytes;
 } adis_spi_xact;
 
 typedef struct {
-	uint8_t data;
-	uint8_t valid;
+	uint16_t data;
+	uint8_t  valid;
 } adis16D_cache_line;
 
 typedef struct {
     adis16D_cache_line adis_id;
+    adis16D_cache_line adis_sampl_per;
 } adis16D_cache;
 
 typedef struct {
-	uint8_t data;
+	uint8_t data_high;
+	uint8_t data_low;
 	uint8_t valid;
 } adis_cache_line;
 
 typedef struct {
     adis_cache_line adis_prod_id;
+    adis_cache_line adis_sampl_per;
 } adis_cache;
 
 extern Ringbuffer                adis_spi_done_q;
@@ -139,13 +148,20 @@ extern spi_master_xact_data      adis_id_xact;
 
 extern adis_cache                adis_data_cache;
 
+extern spi_ctl                   adis_spi_ctl;
+
 void adis_process_done_q() ;
 
 void adis_read_id_cb(spi_master_xact_data* caller, spi_master_xact_data* spi_xact, void* data) ;
 
 void adis_init() ;
 
+void dummy_spi_xact() ;
+
+void adis_process_done_q() ;
+
 void adis_reset();
+void adis_read_smpl_prd() ;
 
 void adis_read_id() ;
 

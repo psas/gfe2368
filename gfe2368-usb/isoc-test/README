@@ -1,0 +1,11 @@
+
+
+This is a test of using the GFE with USB in isochronous
+mode.
+
+The directory 'hostside' contains source for running on a
+linux host.
+
+
+
+

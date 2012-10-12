@@ -8,6 +8,7 @@
 #ifndef _GFE2368_UTIL
 #define _GFE2368_UTIL
 
+#include <stdint.h>
 #include "lpc23xx.h"
 
 #define MAX_I2ASTRING        33

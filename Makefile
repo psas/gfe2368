@@ -5,14 +5,16 @@
 
 NAME            := libgfe2368
 LPCLIBDIR       := ./liblpc23xx
-CROSS           ?= /opt/cross
+CROSS        	?= /opt/cross
+CROSSNAME	?= arm-elf
 
-CC              := $(CROSS)/bin/arm-elf-gcc
-LD              := $(CROSS)/bin/arm-elf-ld
-AR              := $(CROSS)/bin/arm-elf-ar
-AS              := $(CROSS)/bin/arm-elf-as
-CP              := $(CROSS)/bin/arm-elf-objcopy
-OD              := $(CROSS)/bin/arm-elf-objdump
+
+CC              := $(CROSS)/bin/$(CROSSNAME)-gcc
+LD              := $(CROSS)/bin/$(CROSSNAME)-ld
+AR              := $(CROSS)/bin/$(CROSSNAME)-ar
+AS              := $(CROSS)/bin/$(CROSSNAME)-as
+CP              := $(CROSS)/bin/$(CROSSNAME)-objcopy
+OD              := $(CROSS)/bin/$(CROSSNAME)-objdump
 
 TYPE            ?= lpc23xx
 

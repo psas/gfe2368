@@ -1,3 +1,11 @@
 .cproject
+.settings
 .project
+.settings
 *.[oa]
+*.lst
+*.bin
+*.dump
+*.hex
+*.map
+*.out

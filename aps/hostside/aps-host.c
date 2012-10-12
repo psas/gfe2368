@@ -3,6 +3,8 @@
  *
  */
 
+
+//todo: amazeballz mode
 #include <stdlib.h>
 #include <stdio.h>
 #include <libusb.h>
@@ -184,6 +186,15 @@ error_t parse_opt (int key, char *arg, struct argp_state *state)
             gpio_set &= ~(1<<FC_SPS_PIN);
         }
         break;
+    case 'k':
+        if(arg == 0){
+            gpio_set |= (1<<ROCKET_READY_PIN);
+            gpio_clear &= ~(1<<ROCKET_READY_PIN);
+        }else if (!strcmp(arg, "off")){
+            gpio_clear |= (1<<ROCKET_READY_PIN);
+            gpio_set &= ~(1<<ROCKET_READY_PIN);
+        }
+        break;
     default:
       return ARGP_ERR_UNKNOWN;
     }
@@ -234,9 +245,15 @@ int main(int argc, char*argv[]){
             .flags = OPTION_ARG_OPTIONAL,
             .doc = "Turns off the flight computer",
     };
+    struct argp_option rocket_ready = {
+            .name = "rocket-ready",
+            .key = 'k',
+            .arg = "off",
+            .flags = OPTION_ARG_OPTIONAL,
+            .doc = "Turns on/off rocket ready",
+    };
 
-
-    struct argp_option opts[] = {all, wifi, atv, rc, rct, fc, {0}};
+    struct argp_option opts[] = {all, wifi, atv, rc, rct, fc, rocket_ready, {0}};
 
     struct argp parse_strct = {
         .options = opts,

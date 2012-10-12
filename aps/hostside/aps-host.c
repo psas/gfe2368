@@ -45,6 +45,7 @@
 #define RC_POWER_PIN 7
 #define ROCKET_READY_PIN 8
 #define WIFI_POWER_PIN 9
+#define RC_TETHER 15
 
 libusb_context * apu_host = NULL;
 libusb_device_handle * apu_handle = NULL;
@@ -128,7 +129,7 @@ error_t parse_opt (int key, char *arg, struct argp_state *state)
   switch (key)
     {
     case 'a':
-        if(!arg){
+        if(arg[0]!='='){
             gpio_set = ((1<<ATV_SPS_PIN) | (1<<RC_POWER_PIN) |
                         (1<<WIFI_POWER_PIN));
             gpio_clear = 0;
@@ -139,7 +140,7 @@ error_t parse_opt (int key, char *arg, struct argp_state *state)
         }
         break;
     case 'w':
-        if(!arg){
+        if(arg[0]!='='){
             gpio_set |= (1<<WIFI_POWER_PIN);
             gpio_clear &= ~(1<<WIFI_POWER_PIN);
         }else{
@@ -148,7 +149,7 @@ error_t parse_opt (int key, char *arg, struct argp_state *state)
         }
         break;
     case 't':
-        if(!arg){
+        if(arg[0]!='='){
             gpio_set |= (1<<ATV_SPS_PIN);
             gpio_clear &= ~(1<<ATV_SPS_PIN);
         }else{
@@ -157,12 +158,30 @@ error_t parse_opt (int key, char *arg, struct argp_state *state)
         }
         break;
     case 'r':
-        if(!arg){
+        if(arg[0]!='='){
             gpio_set |= (1<<RC_POWER_PIN);
             gpio_clear &= ~(1<<RC_POWER_PIN);
         }else{
             gpio_clear |= (1<<RC_POWER_PIN);
             gpio_set &= ~(1<<RC_POWER_PIN);
+        }
+        break;
+    case 'c':
+        if(arg[0]!='='){
+            gpio_set |= (1<<RC_TETHER);
+            gpio_clear &= ~(1<<RC_TETHER);
+        }else{
+            gpio_clear |= (1<<RC_TETHER);
+            gpio_set &= ~(1<<RC_TETHER);
+        }
+        break;
+    case 'f':
+        if(arg[0]!='='){
+            gpio_set |= (1<<FC_SPS_PIN);
+            gpio_clear &= ~(1<<FC_SPS_PIN);
+        }else{
+            gpio_clear |= (1<<FC_SPS_PIN);
+            gpio_set &= ~(1<<FC_SPS_PIN);
         }
         break;
     default:
@@ -201,7 +220,23 @@ int main(int argc, char*argv[]){
             .flags = OPTION_ARG_OPTIONAL,
             .doc = "Turns on/off the roll control",
     };
-    struct argp_option opts[] = {all, wifi, atv, rc, {0}};
+    struct argp_option rct = {
+            .name = "rct",
+            .key = 'c',
+            .arg = "off",
+            .flags = OPTION_ARG_OPTIONAL,
+            .doc = "Turns on/off the roll control tether",
+    };
+    struct argp_option fc = {
+            .name = "fc",
+            .key = 'f',
+            .arg = "off",
+            .flags = OPTION_ARG_OPTIONAL,
+            .doc = "Turns off the flight computer",
+    };
+
+
+    struct argp_option opts[] = {all, wifi, atv, rc, rct, fc, {0}};
 
     struct argp parse_strct = {
         .options = opts,

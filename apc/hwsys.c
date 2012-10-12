@@ -1,1 +1,0 @@
-../liblpc23xx/startup/hwsys.c

@@ -1,5 +1,0 @@
-System manager and GPIO for the flight computer.
-
-Its job is to act as GPIO over USB for the flight computer (because the built 
-in FC GPIO is wonky) to manage the battery manager, and to turn on the flight
-computer from a serial command. 

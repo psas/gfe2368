@@ -129,57 +129,57 @@ error_t parse_opt (int key, char *arg, struct argp_state *state)
   switch (key)
     {
     case 'a':
-        if(arg[0]!='='){
+        if(arg == 0){
             gpio_set = ((1<<ATV_SPS_PIN) | (1<<RC_POWER_PIN) |
                         (1<<WIFI_POWER_PIN));
             gpio_clear = 0;
-        }else{
+        }else if (!strcmp(arg, "off")){
             gpio_clear = ((1<<ATV_SPS_PIN) | (1<<RC_POWER_PIN) |
                           (1<<WIFI_POWER_PIN));
             gpio_set = 0;
         }
         break;
     case 'w':
-        if(arg[0]!='='){
+        if(arg == 0){
             gpio_set |= (1<<WIFI_POWER_PIN);
             gpio_clear &= ~(1<<WIFI_POWER_PIN);
-        }else{
+        }else if (!strcmp(arg, "off")){
             gpio_clear |= (1<<WIFI_POWER_PIN);
             gpio_set &= ~(1<<WIFI_POWER_PIN);
         }
         break;
     case 't':
-        if(arg[0]!='='){
+        if(arg == 0){
             gpio_set |= (1<<ATV_SPS_PIN);
             gpio_clear &= ~(1<<ATV_SPS_PIN);
-        }else{
+        }else if (!strcmp(arg, "off")){
             gpio_clear |= (1<<ATV_SPS_PIN);
             gpio_set &= ~(1<<ATV_SPS_PIN);
         }
         break;
     case 'r':
-        if(arg[0]!='='){
+        if(arg == 0){
             gpio_set |= (1<<RC_POWER_PIN);
             gpio_clear &= ~(1<<RC_POWER_PIN);
-        }else{
+        }else if (!strcmp(arg, "off")){
             gpio_clear |= (1<<RC_POWER_PIN);
             gpio_set &= ~(1<<RC_POWER_PIN);
         }
         break;
     case 'c':
-        if(arg[0]!='='){
+        if(arg == 0){
             gpio_set |= (1<<RC_TETHER);
             gpio_clear &= ~(1<<RC_TETHER);
-        }else{
+        }else if (!strcmp(arg, "off")){
             gpio_clear |= (1<<RC_TETHER);
             gpio_set &= ~(1<<RC_TETHER);
         }
         break;
     case 'f':
-        if(arg[0]!='='){
+        if(arg == 0){
             gpio_set |= (1<<FC_SPS_PIN);
             gpio_clear &= ~(1<<FC_SPS_PIN);
-        }else{
+        }else if (!strcmp(arg, "off")){
             gpio_clear |= (1<<FC_SPS_PIN);
             gpio_set &= ~(1<<FC_SPS_PIN);
         }

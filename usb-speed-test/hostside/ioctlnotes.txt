@@ -1,0 +1,43 @@
+/*
+ * ioctlnotes.c
+ *
+ *  Created on: Aug 21, 2012
+ *      Author: theo
+ */
+
+
+Submitting a transfer
+ioctl(fd, IOCTL_USBFS_SUBMITURB, urb) where the fd is the usbfs path fd
+
+struct linux_device_handle_priv *hpriv = _device_handle_priv(handle);
+	char filename[PATH_MAX];
+
+	_get_usbfs_path(handle->dev, filename);
+	usbi_dbg("opening %s", filename);
+	hpriv->fd = open(filename, O_RDWR);
+	
+then poll the fd until activity on POLLOUT, at which point we reap an urb 
+r = ioctl(hpriv->fd, IOCTL_USBFS_REAPURBNDELAY, &urb);
+
+and then interpret the results.
+
+For a bulk transfer (interrupt has extra timer stuff but is otherwise the same):
+submit sets 
+	usercontext (data that IDs the urb)
+	type
+	endpoint
+	flags
+	buffer_length
+	buffer
+
+reap reads
+	usercontext
+	buffer
+	actual_length
+	status
+
+ignored (sounds like isoc stuff)
+	start_frame
+	number_of_packets
+	error_count
+	iso_frame_desc

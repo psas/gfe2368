@@ -1,7 +1,7 @@
 
 /*
  * LIS331HH.c
- * testing program for LIS331HH accelerometer
+ * LPC23xx API LIS331HH accelerometer
  */
 
 #include <limits.h>

@@ -254,7 +254,7 @@ int main(void){
     vic_enableIRQ();
 
     // connect to bus
-    USBHwConnect(TRUE);
+    USBHwConnect(true);
 
     cycle_led() ;
     color_led_flash(5, BLUE_LED, FLASH_FAST ) ;

@@ -5,7 +5,7 @@
 
 GCC_VERSION     ?= 4.5.2
 CROSS           ?= /opt/cross
-CROSSNAME	?= arm-elf
+CROSSNAME       ?= arm-elf
 
 CC              := $(CROSS)/bin/$(CROSSNAME)-gcc
 LD              := $(CROSS)/bin/$(CROSSNAME)-ld

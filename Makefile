@@ -5,8 +5,8 @@
 
 NAME            := libgfe2368
 LPCLIBDIR       := ./liblpc23xx
-CROSS        	?= /opt/cross
-CROSSNAME	?= arm-elf
+CROSS           ?= /opt/cross
+CROSSNAME       ?= arm-elf
 
 
 CC              := $(CROSS)/bin/$(CROSSNAME)-gcc
@@ -33,11 +33,11 @@ DEBUG           += -g
 #DEBUG           = -DDEBUG
  
 INCLUDE         := -I$(LPCLIBDIR)/include\
-		   -I$(LPCLIBDIR)/lpc23xx-pll/include\
-		   -I$(LPCLIBDIR)/lpc23xx-mam/include\
-		   -I$(LPCLIBDIR)/lpc23xx-vic/include\
-		   -I$(LPCLIBDIR)/lpc23xx-util/include\
-		   -I$(LPCLIBDIR)/lpc23xx-uart/include\
+                   -I$(LPCLIBDIR)/lpc23xx-pll/include\
+                   -I$(LPCLIBDIR)/lpc23xx-mam/include\
+                   -I$(LPCLIBDIR)/lpc23xx-vic/include\
+                   -I$(LPCLIBDIR)/lpc23xx-util/include\
+                   -I$(LPCLIBDIR)/lpc23xx-uart/include\
                    -I./gfe2368-info/include\
                    -I./gfe2368-util/include
 	

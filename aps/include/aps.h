@@ -20,7 +20,6 @@
 #define READ_REGISTER 0
 #define WRITE_REGISTER 1
 
-static void USBIntHandler(void)__attribute__ ((interrupt("IRQ")));
 void GPIO_isr(void)__attribute__ ((interrupt("IRQ")));
 
 //todo: functions/macros to create/spell check descriptors

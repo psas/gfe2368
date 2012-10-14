@@ -120,11 +120,6 @@ void mainloop(){
 	}
 }
 
-static void USBIntHandler(void){
-    USBHwISR();
-    EXIT_INTERRUPT;
-}
-
 bool gpio_request(TSetupPacket *pSetup, int *piLen, uint8_t **ppbData){
     uint8_t * gpio_reg = *ppbData;
     uint8_t * val_buf = *ppbData;
@@ -270,8 +265,7 @@ int main(){
 //        VIC_SET_EINT3_GPIO_HANDLER(GPIO_isr);
 //        ENABLE_INT(VIC_EINT3_GPIO);
 //	}
-	USBInit();
-	USBRegisterDescriptors(abDescriptors);
+	USBInit(abDescriptors);
 	USBRegisterRequestHandler(REQTYPE_TYPE_VENDOR, gpio_request, abClassReqData);
     VIC_SET_USB_PRIORITY(1);
 	VIC_SET_USB_HANDLER(USBIntHandler);

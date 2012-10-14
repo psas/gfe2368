@@ -234,7 +234,7 @@ int main(void){
 
     uart0_putstring("\n\n***Starting IMU***\n\n");
 
-    USBInit();
+    USBInit(imu_descriptor);
     USBRegisterRequestHandler(REQTYPE_TYPE_VENDOR, imu_ctrl, abClassReqData);
     USBHwRegisterEPIntHandler(ACC_EP, NULL);
     USBHwRegisterEPIntHandler(GYR_EP, NULL);

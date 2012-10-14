@@ -12,9 +12,6 @@
 
 #define BULK_OUT_EP             0x05
 #define BULK_IN_EP              0x82
-//#define ACCEL	1
-//#define GYRO	2
-//#define MAG		3
 
 #define ADDR_ACC                0x80
 #define ADDR_GYR                0x40
@@ -26,10 +23,7 @@
 #define INST_STOP               0x03
 #define INST_INC_SPEED          0x04
 #define INST_DEC_SPEED          0x05
-//#define
-//#define
-//#define
-//#define
+
 #define IMU_INST(X)             ((X) & 0x0F)
 #define IMU_ADDR(X)             ((X) & 0xF0)
 

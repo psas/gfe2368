@@ -3,10 +3,10 @@
 # Makefile for the IMU
 #
 
-NAME            := IMU
+NAME            := imu
 LIBDIR          := ..
 LPCLIBDIR       := $(LIBDIR)/liblpc23xx
-CSRCS		:= LSM303DLH.c LIS331HH.c L3G4200D.c imu-device-host-interface.c
+CSRCS           := LSM303DLH.c LIS331HH.c L3G4200D.c
 
 INCLUDE         := -I.\
                    -I./include\
@@ -14,6 +14,7 @@ INCLUDE         := -I.\
                    -I$(LPCLIBDIR)/lpc23xx-uart/include\
                    -I$(LPCLIBDIR)/lpc23xx-util/include\
                    -I$(LPCLIBDIR)/lpc23xx-pll/include\
+                   -I$(LPCLIBDIR)/lpc23xx-power/include\
                    -I$(LPCLIBDIR)/lpc23xx-binsem/include\
                    -I$(LPCLIBDIR)/lpc23xx-i2c/include\
                    -I$(LPCLIBDIR)/lpc23xx-vic/include\

@@ -20,16 +20,6 @@
                   GPIO USB mode
 */
 
-
-/* GPIO USB command format:
- * action|register|[value]
- * action: 2 bits, perform read/write/update of register with value
- * register: 4 bytes, the address of the register to access
- * value: 4 bytes, the data to perform write or update with.
- */
-
-
-
 #include <stdint.h>
 #include <string.h>
 #include <stdbool.h>
@@ -85,7 +75,7 @@ void sys_mgr_sleep(){
     IO0IntEnR |= (0x1<<3);
     IO0IntClr |= (0x1<<3);
     IDLE_MODE;
-//    while(!(IO0IntStatR & 1<<3));// imitation sleep. There's a problem in
+    // imitation sleep. There's a problem in
     //pllstart that causes everything to omgwtfbbq after a sleep mode
     //safe_sleep(GPIO0WAKE);
     //Freq saved_freq = pllquery_cclk_mhz();
@@ -267,8 +257,6 @@ int main(){
 //	}
 	USBInit(abDescriptors);
 	USBRegisterRequestHandler(REQTYPE_TYPE_VENDOR, gpio_request, abClassReqData);
-    VIC_SET_USB_PRIORITY(1);
-	VIC_SET_USB_HANDLER(USBIntHandler);
 	ENABLE_INT(VIC_USB);
 	USBHwConnect(true);
 	state = SLEEP;

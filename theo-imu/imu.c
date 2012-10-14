@@ -236,10 +236,6 @@ int main(void){
 
     USBInit(imu_descriptor);
     USBRegisterRequestHandler(REQTYPE_TYPE_VENDOR, imu_ctrl, abClassReqData);
-    USBHwRegisterEPIntHandler(ACC_EP, NULL);
-    USBHwRegisterEPIntHandler(GYR_EP, NULL);
-    USBHwRegisterEPIntHandler(MAG_EP, NULL);
-    USBHwRegisterEPIntHandler(CAC_EP, NULL);
     USBHwConnect(true);
 
     cycle_led();

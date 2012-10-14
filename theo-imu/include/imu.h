@@ -103,10 +103,10 @@ static const uint8_t imu_descriptor[] = {
     // device descriptor
     0x12,
     DESC_DEVICE,
-    LE_WORD(0x0101),                    // bcdUSB
-    0x02,                               // bDeviceClass
-    0x00,                               // bDeviceSubClass
-    0x00,                               // bDeviceProtocol
+    LE_WORD(0x0200),                    // bcdUSB
+    0xFF,                               // bDeviceClass
+    0xFF,                               // bDeviceSubClass
+    0xFF,                               // bDeviceProtocol
     MAX_PACKET_SIZE0,                   // bMaxPacketSize
     LE_WORD(0xFFFF),                    // idVendor
     LE_WORD(0x0005),                    // idProduct
@@ -119,54 +119,69 @@ static const uint8_t imu_descriptor[] = {
     // configuration descriptor
     0x09,
     DESC_CONFIGURATION,
-    LE_WORD(67),                        // wTotalLength
-    0x02,                               // bNumInterfaces
+    LE_WORD(46),                        // wTotalLength
+    0x01,                               // bNumInterfaces
     0x01,                               // bConfigurationValue
     0x00,                               // iConfiguration
-    0xC0,                               // bmAttributes
-    0x32,                               // bMaxPower
+    0x80,                               // bmAttributes
+    0xF0,                               // bMaxPower
 
     // data class interface descriptor
     0x09,
     DESC_INTERFACE,
-    0x01,                                // bInterfaceNumber
+    0x00,                                // bInterfaceNumber
     0x00,                                // bAlternateSetting
-    0x02,                                // bNumEndPoints
-    0x0A,                                // bInterfaceClass = data
-    0x00,                                // bInterfaceSubClass
-    0x00,                                // bInterfaceProtocol
+    0x04,                                // bNumEndPoints
+    0xFF,                                // bInterfaceClass = vendor
+    0xFF,                                // bInterfaceSubClass
+    0xFF,                                // bInterfaceProtocol
     0x00,                                // iInterface
-    // data EP OUT
+    // Accelerometer isoc in ep
     0x07,
     DESC_ENDPOINT,
-    ACC_EP,                         // bEndpointAddress
-    0x02,                                // bmAttributes = bulk
-    LE_WORD(MAX_PACKET_SIZE),            // wMaxPacketSize
-    0x00,                                // bInterval
-    // data EP in
+    ACC_EP,                              // bEndpointAddress
+    0x01,                                // bmAttributes = isoc, no sync, data
+    LE_WORD(IMU_PACKET_LENGTH),          // wMaxPacketSize
+    0x01,                                // bInterval
+    // Gyroscope isoc in ep
     0x07,
     DESC_ENDPOINT,
-    GYR_EP,                          // bEndpointAddress
-    0x02,                                // bmAttributes = bulk
-    LE_WORD(MAX_PACKET_SIZE),            // wMaxPacketSize
-    0x00,                                // bInterval
+    GYR_EP,                              // bEndpointAddress
+    0x01,                                // bmAttributes = isoc, no sync, data
+    LE_WORD(IMU_PACKET_LENGTH),          // wMaxPacketSize
+    0x01,                                // bInterval
+    // Magnetometer isoc in ep
+    0x07,
+    DESC_ENDPOINT,
+    GYR_EP,                              // bEndpointAddress
+    0x01,                                // bmAttributes = isoc, no sync, data
+    LE_WORD(IMU_PACKET_LENGTH),          // wMaxPacketSize
+    0x01,                                // bInterval
+    // Compass Accelerometer isoc in ep
+    0x07,
+    DESC_ENDPOINT,
+    CAC_EP,                              // bEndpointAddress
+    0x01,                                // bmAttributes = isoc, no sync, data
+    LE_WORD(IMU_PACKET_LENGTH),          // wMaxPacketSize
+    0x01,                                // bInterval
 
     // string descriptors
-    0x04,
-    DESC_STRING,
-    LE_WORD(0x0409),
+    0x04,                                //bLength
+    DESC_STRING,                         //bDescriptorType
+    LE_WORD(0x0409),                     //wLANGID[0]
 
     0x0A,
     DESC_STRING,
     'P', 0, 'S', 0, 'A', 0, 'S', 0,
 
-    0x14,
+    0x12,
     DESC_STRING,
-    'U', 0, 'S', 0, 'B', 0, 'S', 0, 'e', 0, 'r', 0, 'i', 0, 'a', 0, 'l', 0,
+    'T', 0, 'h', 0, 'e', 0, 'o', 0, '-', 0, 'I', 0, 'M', 0, 'U', 0,
 
-    0x16,
+    0x1A,
     DESC_STRING,
-    'l', 0, 'i', 0, 'b', 0, 'l', 0, 'p', 0, 'c', 0, '2', 0, '3', 0, 'x', 0, 'x', 0,
+    'A', 0, 'V', 0, '3', 0, ' ', 0, 'O', 0, 'c', 0, 't', 0, ' ', 0, '2', 0,
+    '0', 0, '1', 0, '2', 0,
 
     // terminating zero
     0

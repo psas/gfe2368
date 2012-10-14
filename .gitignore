@@ -3,3 +3,8 @@
 .project
 .settings
 *.[oa]
+*.out
+*.bin
+*.hex
+*.dump
+*.map

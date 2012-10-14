@@ -73,16 +73,19 @@ bool find_cmd(char * buffer, char * cmd){// input list?
 void serial_cb(char * buffer){
     if(find_cmd(buffer, "TURNTHEHELLON")){
         state = GPIO_USB_INIT;
+        FIO0SET = (1<<FC_SPS_PIN);
     }else if(find_cmd(buffer, "WHYAREYOUNOTOFFYET")){
-        USBHwConnect(false);
+        //USBHwConnect(false);
         state = SLEEP;
+        FIO0CLR = (1<<FC_SPS_PIN);
     }
 }
 
 void sys_mgr_sleep(){
     IO0IntEnR |= (0x1<<3);
     IO0IntClr |= (0x1<<3);
-    while(!(IO0IntStatR & 1<<3));// imitation sleep. There's a problem in
+    IDLE_MODE;
+//    while(!(IO0IntStatR & 1<<3));// imitation sleep. There's a problem in
     //pllstart that causes everything to omgwtfbbq after a sleep mode
     //safe_sleep(GPIO0WAKE);
     //Freq saved_freq = pllquery_cclk_mhz();
@@ -104,7 +107,7 @@ void mainloop(){
 			break;
         case GPIO_USB_INIT:
             uart0_putstring("\nENTERED GPIO_USB MODE\n");
-            FIO0SET = (1<<FC_SPS_PIN);
+
 //            USBHwConnect(true);
             state = GPIO_USB;
             break;
@@ -242,7 +245,7 @@ void GPIO_isr(void){
 int main(){
     uint8_t abClassReqData[64];
     FIO0DIR = (1<<FC_SPS_PIN) | (1<<ATV_SPS_PIN) | (1<<RC_POWER_PIN) |
-              (1<<ROCKET_READY_PIN) | (1<<WIFI_POWER_PIN);
+              (1<<ROCKET_READY_PIN) | (1<<WIFI_POWER_PIN) | (1<<RC_TETHER);
     PINMODE1 = (0x2<<(2*(IOUT_PIN-16)));
 //    PINMODE4 = (0x2<<(2*ACOK_PIN));
     PCONP = 0;
@@ -255,19 +258,18 @@ int main(){
 	uart0_putstring("\nStarting apc\n");
 	uart0_set_getstring_cb(serial_cb);
 	//usb_init
-	BQ24725_init(I2C2, DEFAULT);
-	//printf_lpc(UART0, "FIO2: %x\n", FIO2PIN);
-	BQ24725_GetManufactureID(NULL);
-	while(1);
-	if(FIO2PIN & (1<<ACOK_PIN)){
-	    uart0_putstring("ACOK set on startup\n");
-	    settings_BQ();
-	}else{
-	    uart0_putstring("ACOK not set on startup\n");
-        IO2IntEnR |= 1<<ACOK_PIN;
-        VIC_SET_EINT3_GPIO_HANDLER(GPIO_isr);
-        ENABLE_INT(VIC_EINT3_GPIO);
-	}
+//	BQ24725_init(I2C2, DEFAULT);
+//	//printf_lpc(UART0, "FIO2: %x\n", FIO2PIN);
+//	BQ24725_GetManufactureID(NULL);
+//	if(FIO2PIN & (1<<ACOK_PIN)){
+//	    uart0_putstring("ACOK set on startup\n");
+//	    settings_BQ();
+//	}else{
+//	    uart0_putstring("ACOK not set on startup\n");
+//        IO2IntEnR |= 1<<ACOK_PIN;
+//        VIC_SET_EINT3_GPIO_HANDLER(GPIO_isr);
+//        ENABLE_INT(VIC_EINT3_GPIO);
+//	}
 	USBInit();
 	USBRegisterDescriptors(abDescriptors);
 	USBRegisterRequestHandler(REQTYPE_TYPE_VENDOR, gpio_request, abClassReqData);

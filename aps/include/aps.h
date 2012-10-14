@@ -10,6 +10,7 @@
 #define RC_POWER_PIN 7
 #define ROCKET_READY_PIN 8
 #define WIFI_POWER_PIN 9
+#define RC_TETHER 15
 
 #define MAX_PACKET_SIZE 64
 

@@ -140,11 +140,13 @@ typedef struct {
 typedef struct {
     adis_cache_line adis_prod_id;
     adis_cache_line adis_sampl_per;
+
 } adis_cache;
 
 extern Ringbuffer                adis_spi_done_q;
 
-extern spi_master_xact_data      adis_id_xact;
+extern spi_master_xact_data      adis_read_id_xact;
+extern spi_master_xact_data      adis_read_smpl_prd_xact;
 
 extern adis_cache                adis_data_cache;
 
@@ -152,17 +154,16 @@ extern spi_ctl                   adis_spi_ctl;
 
 void adis_process_done_q() ;
 
-void adis_read_id_cb(spi_master_xact_data* caller, spi_master_xact_data* spi_xact, void* data) ;
+void adis_read_cb(spi_master_xact_data* caller, spi_master_xact_data* spi_xact, void* data) ;
 
 void adis_init() ;
-
-void dummy_spi_xact() ;
 
 void adis_process_done_q() ;
 
 void adis_reset();
-void adis_read_smpl_prd() ;
 
+void adis_read_smpl_prd() ;
+void adis_read_brst_mode() ;
 void adis_read_id() ;
 
 void adis_read_intr(adis_spi_xact* s) ;

@@ -12,7 +12,10 @@
 
 Ringbuffer                adis_spi_done_q;
 
-spi_master_xact_data      adis_id_xact;
+spi_master_xact_data      adis_read_id_xact;
+spi_master_xact_data      adis_read_smpl_prd_xact;
+
+spi_master_xact_data      adis_read_brst_mode_xact;
 
 adis_cache                adis_data_cache;
 
@@ -22,8 +25,6 @@ spi_ctl                   adis_spi_ctl;
  *
  */
 void adis_init() {
-
-	I_WAS_CALLED;
 
 	rb_initialize(&adis_spi_done_q);
 
@@ -54,10 +55,6 @@ void adis_init() {
  */
 void adis_reset() {
 
-	ADIS_RESET_HIGH;
-
-	util_wait_msecs(ADIS_RESET_MSECS);
-
 	ADIS_RESET_LOW;
 
 	util_wait_msecs(ADIS_RESET_MSECS);
@@ -87,7 +84,7 @@ void adis_get_data() {
 
 	bool            ok            = false;
 
-	adis_regaddr     adis_recent  = 0;
+	adis_regaddr    adis_recent  = 0;
 
 	uint16_t        adis_data[ADIS_MAX_DATA_BUFFER];
 
@@ -98,10 +95,10 @@ void adis_get_data() {
 			switch(adis_recent) {
 
 			case ADIS_PRODUCT_ID:
-				printf_lpc(UART0, "\r\n adis ID is: 0x%x\r\n",      adis_data[0]) ;
+				printf_lpc(UART0, "ID 0x%x\r\n",      adis_data[0]) ;
 				break;
 			case ADIS_SMPL_PRD:
-				printf_lpc(UART0, "\r\n adis SMPL_PER is: 0x%x\r\n",      adis_data[0]) ;
+				printf_lpc(UART0, "SMPL_PER 0x%x\r\n",      adis_data[0]) ;
 				break;
 			default:
 				break;
@@ -118,7 +115,7 @@ void adis_process_done_q() {
 }
 
 
-void adis_read_id_cb(spi_master_xact_data* caller, spi_master_xact_data* spi_xact, void* data) {
+void adis_read_cb(spi_master_xact_data* caller, spi_master_xact_data* spi_xact, void* data) {
 	   // data is NULL in this cb.
 		// if (data != NULL) {}
 
@@ -167,65 +164,62 @@ static adis_regaddr adis_create_read_addr(adis_regaddr s) {
 	return (s & 0b01111111);
 }
 
-void adis_read_smpl_prd() {
 
-	adis_spi_xact    adis_id_data;
+void adis_read_brst_mode() {
 
-    adis_id_data.regaddr            = adis_create_read_addr(ADIS_SMPL_PRD);
-    adis_id_data.cmd                = 0x7e;
-    adis_id_data.num_readbytes      = 3;
-    adis_id_data.num_writebytes     = 2;
-    adis_id_data.cb_fn              = adis_read_id_cb;
-    adis_read_intr(&adis_id_data);
+	spi_init_master_xact_data(&adis_read_brst_mode_xact);
+
+	adis_read_brst_mode_xact.spi_cpha_val    = SPI_SCK_SECOND_CLK;
+	adis_read_brst_mode_xact.spi_cpol_val    = SPI_SCK_ACTIVE_HIGH;
+	adis_read_brst_mode_xact.spi_lsbf_val    = SPI_DATA_MSB_FIRST;
+
+	adis_read_brst_mode_xact.writebuf[0]     = adis_create_read_addr(ADIS_GLOB_CMD);
+	adis_read_brst_mode_xact.writebuf[1]     = 0x0;
+	adis_read_brst_mode_xact.write_numbytes  = 2;
+	adis_read_brst_mode_xact.read_numbytes   = 38;
+	adis_read_brst_mode_xact.dummy_value     = 0x7f;
+
+	// Start the transaction
+	start_spi_master_xact_intr(&adis_read_brst_mode_xact, adis_read_cb) ;
 
 }
-void dummy_spi_xact() {
-	adis_spi_xact    adis_dummy_data;
 
-	adis_dummy_data.regaddr            = 0xfc;
-	adis_dummy_data.cmd                = 0x7e;
-	adis_dummy_data.num_readbytes      = 0;
-	adis_dummy_data.num_writebytes     = 2;
-	adis_dummy_data.cb_fn              = adis_read_id_cb;
-	adis_read_intr(&adis_dummy_data);
+
+void adis_read_smpl_prd() {
+
+	spi_init_master_xact_data(&adis_read_smpl_prd_xact);
+
+	adis_read_smpl_prd_xact.spi_cpha_val    = SPI_SCK_SECOND_CLK;
+	adis_read_smpl_prd_xact.spi_cpol_val    = SPI_SCK_ACTIVE_HIGH;
+	adis_read_smpl_prd_xact.spi_lsbf_val    = SPI_DATA_MSB_FIRST;
+
+	adis_read_smpl_prd_xact.writebuf[0]     = adis_create_read_addr(ADIS_SMPL_PRD);
+	adis_read_smpl_prd_xact.writebuf[1]     = 0x0;
+	adis_read_smpl_prd_xact.write_numbytes  = 2;
+	adis_read_smpl_prd_xact.read_numbytes   = 3;
+	adis_read_smpl_prd_xact.dummy_value     = 0x7f;
+
+	// Start the transaction
+	start_spi_master_xact_intr(&adis_read_smpl_prd_xact, adis_read_cb) ;
 
 }
 
 void adis_read_id() {
 
-	adis_spi_xact    adis_id_data;
+	spi_init_master_xact_data(&adis_read_id_xact);
 
-    adis_id_data.regaddr            = adis_create_read_addr(ADIS_PRODUCT_ID);
-    adis_id_data.cmd                = 0x7e;
-    adis_id_data.num_readbytes      = 4;
-    adis_id_data.num_writebytes     = 2;
-    adis_id_data.cb_fn              = adis_read_id_cb;
-    adis_read_intr(&adis_id_data);
+	adis_read_id_xact.spi_cpha_val    = SPI_SCK_SECOND_CLK;
+	adis_read_id_xact.spi_cpol_val    = SPI_SCK_ACTIVE_HIGH;
+	adis_read_id_xact.spi_lsbf_val    = SPI_DATA_MSB_FIRST;
 
+	adis_read_id_xact.writebuf[0]     = adis_create_read_addr(ADIS_PRODUCT_ID);
+	adis_read_id_xact.writebuf[1]     = 0x0;
+	adis_read_id_xact.write_numbytes  = 2;
+	adis_read_id_xact.read_numbytes   = 3;
+	adis_read_id_xact.dummy_value     = 0x7f;
+
+	// Start the transaction
+	start_spi_master_xact_intr(&adis_read_id_xact, adis_read_cb) ;
 }
 
 
-/*! \brief Interrupt driven version of read adis.
- *
- * For SPI interrupt in the adis, SPI is set up for MSB first.
- *
- * Configure structure adis_spi_xact prior to calling function.
- */
-void adis_read_intr(adis_spi_xact* s) {
-
-    spi_init_master_xact_data(&adis_id_xact);
-
-    adis_id_xact.spi_cpha_val    = SPI_SCK_SECOND_CLK;
-    adis_id_xact.spi_cpol_val    = SPI_SCK_ACTIVE_LOW;
-    adis_id_xact.spi_lsbf_val    = SPI_DATA_MSB_FIRST;
-
-	adis_id_xact.writebuf[0]     = s->regaddr;
-    adis_id_xact.writebuf[1]     = s->cmd;
-    adis_id_xact.write_numbytes  = s->num_writebytes;
-    adis_id_xact.read_numbytes   = s->num_readbytes;
-    adis_id_xact.dummy_value     = 0x7e;
-
-    // Start the transaction
-
-    start_spi_master_xact_intr(&adis_id_xact, s->cb_fn) ;
-}

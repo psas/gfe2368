@@ -72,7 +72,7 @@ static const uint8_t abDescriptors[] = {
 
     0x14,
     DESC_STRING,
-    'U', 0, 'S', 0, 'B', 0, 'A', 0, 'P', 0, 'U', 0, 't', 0, 's', 0, 't', 0,
+    'U', 0, 'S', 0, 'B', 0, 'A', 0, 'P', 0, 'S', 0, 't', 0, 's', 0, 't', 0,
 
     0x16,
     DESC_STRING,

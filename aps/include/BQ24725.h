@@ -75,7 +75,7 @@ typedef struct BQ24725_charge_options{
 
 extern const BQ24725_charge_options BQ24725_charge_options_POR_default;
 
-uint16_t inline form_options_data(BQ24725_charge_options opts);
+uint16_t inline form_options_data(BQ24725_charge_options * opts);
 void inline form_options_struct(uint16_t data, BQ24725_charge_options* opt);
 
 typedef void (BQ24725_callback) (uint16_t data); //todo: void* arg?

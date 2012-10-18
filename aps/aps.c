@@ -68,6 +68,22 @@ void serial_cb(char * buffer){
         //USBHwConnect(false);
         state = SLEEP;
         FIO0CLR = (1<<FC_SPS_PIN);
+    }else if(find_cmd(buffer, "GOGOGADGETATV")){
+        FIO0SET = (1<<ATV_SPS_PIN);
+    }else if(find_cmd(buffer, "ATVSTFUKTHXBAI")){
+        FIO0CLR = (1<<ATV_SPS_PIN);
+    }else if(find_cmd(buffer, "GOGOGADGETWIFI")){
+        FIO0SET = (1<<WIFI_POWER_PIN);
+    }else if(find_cmd(buffer, "WIFISTFUKTHXBAI")){
+        FIO0CLR = (1<<WIFI_POWER_PIN);
+    }else if(find_cmd(buffer, "GOGOGADGETROLL")){
+        FIO0SET = (1<<RC_POWER_PIN);
+    }else if(find_cmd(buffer, "ROLLSTFUKTHXBAI")){
+        FIO0CLR = (1<<RC_POWER_PIN);
+    }else if(find_cmd(buffer, "GOGOGADGETRCTETHER")){
+        FIO0SET = (1<<RC_TETHER);
+    }else if(find_cmd(buffer, "RCTETHERSTFUKTHXBAI")){
+        FIO0CLR = (1<<RC_TETHER);
     }
 }
 
@@ -96,7 +112,7 @@ void mainloop(){
 		case SERIAL:
 			break;
         case GPIO_USB_INIT:
-            uart0_putstring("\nENTERED GPIO_USB MODE\n");
+//            uart0_putstring("\nENTERED GPIO_USB MODE\n");
 
 //            USBHwConnect(true);
             state = GPIO_USB;
@@ -117,7 +133,7 @@ bool gpio_request(TSetupPacket *pSetup, int *piLen, uint8_t **ppbData){
     //int left;
     if(REQTYPE_GET_DIR(pSetup->bmRequestType)){
         //device-to-host
-        printf_lpc(UART0, "%x\n%x\n%x\n%x\n%x\n", FIO0PIN, FIO1PIN, FIO2PIN, FIO3PIN, FIO4PIN);
+        //printf_lpc(UART0, "%x\n%x\n%x\n%x\n%x\n", FIO0PIN, FIO1PIN, FIO2PIN, FIO3PIN, FIO4PIN);
         gpio_reg[0] = (FIO0PIN & 0xFF<<0)>>0;
         gpio_reg[1] = (FIO0PIN & 0xFF<<8)>>8;
         gpio_reg[2] = (FIO0PIN & 0xFF<<16)>>16;
@@ -145,7 +161,7 @@ bool gpio_request(TSetupPacket *pSetup, int *piLen, uint8_t **ppbData){
 
         val = (val_buf[0]) | (val_buf[1]<<8) | (val_buf[2]<<16) | (val_buf[3]<<24);
         if(pSetup->bRequest & 0x80){
-            uart0_putstring("Setting GPIO\n");
+            //uart0_putstring("Setting GPIO\n");
             switch(pSetup->bRequest & 0x0F){
             case 0:
                 FIO0SET = val;
@@ -166,7 +182,7 @@ bool gpio_request(TSetupPacket *pSetup, int *piLen, uint8_t **ppbData){
                 break;
             }
         }else{
-            uart0_putstring("Clearing GPIO\n");
+            //uart0_putstring("Clearing GPIO\n");
             switch(pSetup->bRequest & 0x0F){
             case 0:
                 FIO0CLR = val;
@@ -193,7 +209,6 @@ bool gpio_request(TSetupPacket *pSetup, int *piLen, uint8_t **ppbData){
 
 
 void settings_BQ(){//todo: verify acok after each step
-    uart0_putstring("Setting BQ\n");
     BQ24725_charge_options BQ24725_rocket_init = {
                 .ACOK_deglitch_time = t150ms,
                 .WATCHDOG_timer = disabled,
@@ -206,14 +221,21 @@ void settings_BQ(){//todo: verify acok after each step
                 .ACOC_threshold = l1_66X,
                 .charge_inhibit = charge_enable
             };
-
+            uart0_putstring("\n");
+            uart0_putstring(util_uitoa(form_options_data(&BQ24725_rocket_init), HEX));
+            uart0_putstring("\n");
             BQ24725_SetChargeOption(&BQ24725_rocket_init);
-            uart0_putstring("Setting current\n");
+            while(is_binsem_locked(&i2c2_binsem_g)== 1);
+            uart0_putstring("set charge option\n");
             BQ24725_SetChargeCurrent(0x400);
-            uart0_putstring("Setting voltage\n");
+            while(is_binsem_locked(&i2c2_binsem_g)== 1);
+            uart0_putstring("set charge current\n");
             BQ24725_SetChargeVoltage(0x41A0);
-            uart0_putstring("Setting input\n");
+            while(is_binsem_locked(&i2c2_binsem_g)== 1);
+            uart0_putstring("set charge voltage\n");
             BQ24725_SetInputCurrent(0x1000);
+            while(is_binsem_locked(&i2c2_binsem_g)== 1);
+            uart0_putstring("set input current\n");
 }
 
 void GPIO_isr(void){
@@ -225,6 +247,13 @@ void GPIO_isr(void){
         DISABLE_INT(VIC_EINT3_GPIO);
     }
     EXIT_INTERRUPT;
+}
+
+void man_dat(uint16_t data){
+    uart0_putstring("\n");
+    uart0_putstring("OPTION: ");
+    uart0_putstring(util_uitoa(data, HEX));
+    uart0_putstring("\n");
 }
 
 int main(){
@@ -240,27 +269,30 @@ int main(){
     init_color_led();
 	all_led_off();
 	cycle_led();
-	uart0_putstring("\nStarting apc\n");
 	uart0_set_getstring_cb(serial_cb);
 	//usb_init
-//	BQ24725_init(I2C2, DEFAULT);
-//	//printf_lpc(UART0, "FIO2: %x\n", FIO2PIN);
-//	BQ24725_GetManufactureID(NULL);
-//	if(FIO2PIN & (1<<ACOK_PIN)){
-//	    uart0_putstring("ACOK set on startup\n");
-//	    settings_BQ();
-//	}else{
-//	    uart0_putstring("ACOK not set on startup\n");
-//        IO2IntEnR |= 1<<ACOK_PIN;
-//        VIC_SET_EINT3_GPIO_HANDLER(GPIO_isr);
-//        ENABLE_INT(VIC_EINT3_GPIO);
-//	}
+	BQ24725_init(I2C2, DEFAULT);
+	if(FIO2PIN & (1<<ACOK_PIN)){
+	    uart0_putstring("ACOK set on startup\n");
+	    settings_BQ();
+	}else{
+	    uart0_putstring("ACOK not set on startup\n");
+        IO2IntEnR |= 1<<ACOK_PIN;
+        VIC_SET_EINT3_GPIO_HANDLER(GPIO_isr);
+        ENABLE_INT(VIC_EINT3_GPIO);
+	}
+	BQ24725_GetDeviceID(man_dat);
+    while(is_binsem_locked(&i2c2_binsem_g)== 1);
+	BQ24725_GetManufactureID(man_dat);
+    while(is_binsem_locked(&i2c2_binsem_g)== 1);
+	BQ24725_GetChargeOption(man_dat);
+	 while(is_binsem_locked(&i2c2_binsem_g)== 1);
+	 uart0_putstring("past getcharge\n");
 	USBInit(abDescriptors);
 	USBRegisterRequestHandler(REQTYPE_TYPE_VENDOR, gpio_request, abClassReqData);
 	ENABLE_INT(VIC_USB);
 	USBHwConnect(true);
 	state = SLEEP;
-	uart0_putstring("Entering mainloop\n");
 	mainloop();
 	return 0;
 }

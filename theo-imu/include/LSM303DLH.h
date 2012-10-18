@@ -8,7 +8,7 @@
 #ifndef LSM303DLH_H_
 #define LSM303DLH_H_
 
-void LSM303DLH_m_get_data(XACT_FnCallback*);
+void LSM303DLH_m_get_data(i2c_callback*);
 void LSM303DLH_init_m(i2c_iface i2c_ch);
 int LSM303DLH_m_set_ctrl_reg(int, uint8_t);
 

@@ -58,24 +58,32 @@ void imu_isr() __attribute__ ((interrupt("IRQ")));
  */
 #define L3G4200D_STUCK ((IO0IntEnR & GYRO_INT2) && \
         !(IO0IntStatR & GYRO_INT2) && (FIO0PIN & GYRO_INT2) && \
-        !is_binsem_locked(&i2c0_binsem_g))
+        !i2c_active(I2C0))
 
 #define LIS331HH_STUCK ((IO0IntEnR & ACCEL_INT1) && \
         !(IO0IntStatR & ACCEL_INT1) && (FIO0PIN & ACCEL_INT1) && \
-        !is_binsem_locked(&i2c1_binsem_g))
-
+        !i2c_active(I2C1))
+/*
+the LSM303DLH_M DRDY line is high always except when a new sample is being
+loaded into the data registers
 #define LSM303DLH_M_STUCK ((IO0IntEnR & MAG_DRDY) && \
         !(IO0IntStatR & MAG_DRDY) && (FIO0PIN & MAG_DRDY) && \
         !is_binsem_locked(&i2c2_binsem_g))
+*/
 
 #define ISOC0_IN_EP 0x83
 #define ISOC1_IN_EP 0x86
 #define ISOC2_IN_EP 0x89
 #define ISOC3_IN_EP 0x8C
-#define ACC_EP ISOC0_IN_EP
-#define GYR_EP ISOC1_IN_EP
-#define MAG_EP ISOC2_IN_EP
-#define CAC_EP ISOC3_IN_EP
+
+#define BULK0_IN_EP 0x82
+#define BULK1_IN_EP 0x85
+#define BULK2_IN_EP 0x88
+#define BULK3_IN_EP 0x8B
+#define ACC_EP BULK0_IN_EP
+#define GYR_EP BULK1_IN_EP
+#define MAG_EP BULK2_IN_EP
+#define CAC_EP BULK3_IN_EP
 
 #define CTRL_OUT_EP             0x00
 #define ADDR_ACC                0x80
@@ -140,28 +148,28 @@ static const uint8_t imu_descriptor[] = {
     0x07,
     DESC_ENDPOINT,
     ACC_EP,                              // bEndpointAddress
-    0x01,                                // bmAttributes = isoc, no sync, data
+    0x02,                                // bmAttributes = bulk
     LE_WORD(IMU_PACKET_LENGTH),          // wMaxPacketSize
     0x01,                                // bInterval
     // Gyroscope isoc in ep
     0x07,
     DESC_ENDPOINT,
     GYR_EP,                              // bEndpointAddress
-    0x01,                                // bmAttributes = isoc, no sync, data
+    0x02,                                // bmAttributes = bulk
     LE_WORD(IMU_PACKET_LENGTH),          // wMaxPacketSize
     0x01,                                // bInterval
     // Magnetometer isoc in ep
     0x07,
     DESC_ENDPOINT,
-    GYR_EP,                              // bEndpointAddress
-    0x01,                                // bmAttributes = isoc, no sync, data
+    MAG_EP,                              // bEndpointAddress
+    0x02,                                // bmAttributes = bulk
     LE_WORD(IMU_PACKET_LENGTH),          // wMaxPacketSize
     0x01,                                // bInterval
     // Compass Accelerometer isoc in ep
     0x07,
     DESC_ENDPOINT,
     CAC_EP,                              // bEndpointAddress
-    0x01,                                // bmAttributes = isoc, no sync, data
+    0x02,                                // bmAttributes = bulk
     LE_WORD(IMU_PACKET_LENGTH),          // wMaxPacketSize
     0x01,                                // bInterval
 

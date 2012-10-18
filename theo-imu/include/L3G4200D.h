@@ -10,7 +10,7 @@
 
 
 void L3G4200D_init(i2c_iface i2c_ch);
-void L3G4200D_get_data(XACT_FnCallback* xact_callback);
+void L3G4200D_get_data(i2c_callback* xact_callback);
 int L3G4200D_data_overrun(uint8_t status_reg);
 int L3G4200D_data_available(uint8_t status_reg);
 int L3G4200D_set_ctrl_reg(int, uint8_t);

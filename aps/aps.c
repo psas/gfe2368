@@ -224,18 +224,18 @@ void settings_BQ(){//todo: verify acok after each step
             uart0_putstring("\n");
             uart0_putstring(util_uitoa(form_options_data(&BQ24725_rocket_init), HEX));
             uart0_putstring("\n");
-            BQ24725_SetChargeOption(&BQ24725_rocket_init);
-            while(is_binsem_locked(&i2c2_binsem_g)== 1);
-            uart0_putstring("set charge option\n");
             BQ24725_SetChargeCurrent(0x400);
-            while(is_binsem_locked(&i2c2_binsem_g)== 1);
+            poll_wait(I2C2);
             uart0_putstring("set charge current\n");
             BQ24725_SetChargeVoltage(0x41A0);
-            while(is_binsem_locked(&i2c2_binsem_g)== 1);
+            poll_wait(I2C2);
             uart0_putstring("set charge voltage\n");
             BQ24725_SetInputCurrent(0x1000);
-            while(is_binsem_locked(&i2c2_binsem_g)== 1);
+            poll_wait(I2C2);
             uart0_putstring("set input current\n");
+            BQ24725_SetChargeOption(&BQ24725_rocket_init);
+            poll_wait(I2C2);
+            uart0_putstring("set charge option\n");
 }
 
 void GPIO_isr(void){
@@ -282,11 +282,11 @@ int main(){
         ENABLE_INT(VIC_EINT3_GPIO);
 	}
 	BQ24725_GetDeviceID(man_dat);
-    while(is_binsem_locked(&i2c2_binsem_g)== 1);
+	poll_wait(I2C2);
 	BQ24725_GetManufactureID(man_dat);
-    while(is_binsem_locked(&i2c2_binsem_g)== 1);
+	poll_wait(I2C2);
 	BQ24725_GetChargeOption(man_dat);
-	 while(is_binsem_locked(&i2c2_binsem_g)== 1);
+	poll_wait(I2C2);
 	 uart0_putstring("past getcharge\n");
 	USBInit(abDescriptors);
 	USBRegisterRequestHandler(REQTYPE_TYPE_VENDOR, gpio_request, abClassReqData);

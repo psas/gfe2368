@@ -36,7 +36,7 @@ typedef enum {FT59_19pct=0, FT62_65pct=0x800, FT66_55pct=0x1000,
 	FT70_97pct=0x1800}  BQ24725_BAT_depletion_threshold;
 #define BQ24725_BAT_depletion_threshold_MASK 0x1800
 
-typedef enum {inc18pct=0, dec18pct=0x400}  BQ24725_EMI_sw_freq_adj;
+typedef enum {dec18pct=0, inc18pct=0x400}  BQ24725_EMI_sw_freq_adj;
 #define BQ24725_EMI_sw_freq_adj_MASK 0x400
 
 typedef enum {sw_freq_adj_disable=0, sw_freq_adj_enable= 0x200}

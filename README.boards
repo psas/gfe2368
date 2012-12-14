@@ -1,0 +1,17 @@
+
+
+Sun 07 October 2012 15:07:54 (PDT)
+The following GFE boards are know to have committed to specific functionality
+
+Board Number            Committment
+1                       Library Dev   (SPI Flash and I2C eeprom attached. Future plans: CAN )
+2                       ???
+3                       ???
+4                       Theo IMU      (Multiple (3?) imu related ICs attached)
+5                       Populated, no mods (yet) (used for System manager?)
+6                       ADIS IMU      (Physical cutout and wiring for Analog Devices ADIS IMU)
+7                       ???
+8                       ???
+9                       Unpopulated
+10                      Unpopulated   Carrier for board 6 ( Temporary)
+

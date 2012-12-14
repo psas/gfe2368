@@ -1,5 +1,6 @@
 
 Tue 02 October 2012 15:11:43 (PDT)
+
 GFE Board #1 has been wired with a SPI device and an I2C
 device:
 
@@ -7,5 +8,10 @@ SPI: Atmel at45161D 16-megabit Dataflash
 
 
 I2C: Microchip 24LC256 Serial EEPROM
+
+
+This board is used for LPC library development and testing.
+It is also useful to compare expected behaviors with new
+devices under development.
 
 

@@ -7,9 +7,6 @@ GCC_VERSION     ?= 4.5.2
 CROSS           ?= /opt/cross
 CROSSNAME	?= arm-elf
 
-ARMLINUXGCCLIB  := $(CROSS)/lib/gcc/$(CROSSNAME)/$(GCC_VERSION)
-ARMLINUXLIB     := $(CROSS)/$(CROSSNAME)/lib
-
 CC              := $(CROSS)/bin/$(CROSSNAME)-gcc
 LD              := $(CROSS)/bin/$(CROSSNAME)-ld
 AR              := $(CROSS)/bin/$(CROSSNAME)-ar

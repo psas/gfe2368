@@ -165,7 +165,7 @@ static adis_regaddr adis_create_read_addr(adis_regaddr s) {
 }
 
 
-void adis_read_brst_mode() {
+void adis_read_brst_mode(SPI_XACT_FnCallback cb) {
 
 	spi_init_master_xact_data(&adis_read_brst_mode_xact);
 
@@ -180,7 +180,7 @@ void adis_read_brst_mode() {
 	adis_read_brst_mode_xact.dummy_value     = 0x7f;
 
 	// Start the transaction
-	start_spi_master_xact_intr(&adis_read_brst_mode_xact, adis_read_cb) ;
+	start_spi_master_xact_intr(&adis_read_brst_mode_xact, cb) ;
 
 }
 

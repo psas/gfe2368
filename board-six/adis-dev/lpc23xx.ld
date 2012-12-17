@@ -1,1 +1,1 @@
-../../../liblpc23xx/startup/lpc23xx.ld
+../../liblpc23xx/startup/lpc23xx.ld

@@ -1,1 +1,1 @@
-../../../liblpc23xx/startup/hwsys.c
+../../liblpc23xx/startup/hwsys.c

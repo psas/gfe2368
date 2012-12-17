@@ -22,7 +22,7 @@
 #include <string.h>                     // memcpy
 #include <limits.h>
 #include <stdint.h>
-
+#include <stdbool.h>
 
 #include "lpc23xx.h"
 #include "lpc23xx-debug.h"
@@ -67,8 +67,8 @@
 static TLineCoding      LineCoding = {115200, 0, 0, 8};
 static uint8_t          abBulkBuf[64];
 static uint8_t          abClassReqData[8];
-static volatile BOOL    fBulkInBusy;
-static volatile BOOL    fChainDone;
+static volatile bool    fBulkInBusy;
+static volatile bool    fChainDone;
 
 static fifo_type           txfifo;
 static fifo_type           rxfifo;
@@ -228,16 +228,16 @@ static void BulkOut(uint8_t bEP, uint8_t bEPStatus) {
   @param [in] bEP
   @param [in] bEPStatus
   */
-static void SendNextBulkIn(uint8_t bEP, BOOL fFirstPacket)
+static void SendNextBulkIn(uint8_t bEP, bool fFirstPacket)
 {
     int iLen;
 
     // this transfer is done
-    fBulkInBusy = FALSE;
+    fBulkInBusy = false;
 
     // first packet?
     if (fFirstPacket) {
-        fChainDone = FALSE;
+        fChainDone = false;
     }
 
     // last packet?
@@ -254,11 +254,11 @@ static void SendNextBulkIn(uint8_t bEP, BOOL fFirstPacket)
 
     // send over USB
     USBHwEPWrite(bEP, abBulkBuf, iLen);
-    fBulkInBusy = TRUE;
+    fBulkInBusy = true;
 
     // was this a short packet?
     if (iLen < MAX_PACKET_SIZE) {
-        fChainDone = TRUE;
+        fChainDone = true;
     }
 }
 
@@ -271,7 +271,7 @@ static void SendNextBulkIn(uint8_t bEP, BOOL fFirstPacket)
   */
 static void BulkIn(uint8_t bEP, uint8_t bEPStatus)
 {
-    SendNextBulkIn(bEP, FALSE);
+    SendNextBulkIn(bEP, false);
 }
 
 
@@ -282,7 +282,7 @@ static void BulkIn(uint8_t bEP, uint8_t bEPStatus)
   @param [out] piLen
   @param [out] ppbData
   */
-static BOOL HandleClassRequest(TSetupPacket *pSetup, int *piLen, uint8_t **ppbData)
+static bool HandleClassRequest(TSetupPacket *pSetup, int *piLen, uint8_t **ppbData)
 {
     switch (pSetup->bRequest) {
 
@@ -312,9 +312,9 @@ static BOOL HandleClassRequest(TSetupPacket *pSetup, int *piLen, uint8_t **ppbDa
             break;
 
         default:
-            return FALSE;
+            return false;
     }
-    return TRUE;
+    return true;
 }
 
 
@@ -327,8 +327,8 @@ void VCOM_init(void)
 
     fifo_init(&txfifo);
     fifo_init(&rxfifo);
-    fBulkInBusy = FALSE;
-    fChainDone = TRUE;
+    fBulkInBusy = false;
+    fChainDone = true;
 }
 
 /**
@@ -403,7 +403,7 @@ static void USBFrameHandler(uint16_t wFrame)
 {
     if (!fBulkInBusy && (fifo_avail(&txfifo) != 0)) {
         // send first packet
-        SendNextBulkIn(BULK_IN_EP, TRUE);
+        SendNextBulkIn(BULK_IN_EP, true);
     }
 }
 
@@ -416,7 +416,7 @@ static void USBFrameHandler(uint16_t wFrame)
 static void USBDevIntHandler(uint8_t bDevStatus)
 {
     if ((bDevStatus & DEV_STATUS_RESET) != 0) {
-        fBulkInBusy = FALSE;
+        fBulkInBusy = false;
     }
 }
 
@@ -512,8 +512,7 @@ int main(void){
     DBG(UART0,"Initializing USB stack...\n");
 
     // Initialize stack
-    USBInit();
-
+    USBInit(abDescriptors);
     DBG(UART0,"Past USBInit\n");
 
     // register descriptors
@@ -551,7 +550,7 @@ int main(void){
     vic_enableIRQ();
 
     // connect to bus
-    USBHwConnect(TRUE);
+    USBHwConnect(true);
 
     cycle_led() ;
     color_led_flash(5, BLUE_LED, FLASH_FAST ) ;

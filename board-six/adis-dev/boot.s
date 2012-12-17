@@ -1,1 +1,1 @@
-../../../liblpc23xx/startup/boot.s
+../../liblpc23xx/startup/boot.s

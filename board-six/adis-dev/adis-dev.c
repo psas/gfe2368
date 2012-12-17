@@ -19,13 +19,14 @@
 #include "adis-dev.h"
 
 bool getting_data = false;
+
 void adis_cb(spi_master_xact_data* caller, spi_master_xact_data* spi_xact, void* data){
     //REQUIRES ADDITIONAL PYLONS
 
 
     int bytes_sent = USBHwEPWrite (BULK0_IN_EP, spi_xact->readbuf, ADIS_PACKET_LENGTH);
     if(bytes_sent != ADIS_PACKET_LENGTH){
-        uart0_putstring("\n***L3G4200D WRITE DATA FAILED***\n");
+        uart0_putstring("\n%s: ***ADIS WRITE DATA TO USB FAILED***\n", __func__);
     }
     getting_data = false;
 }
@@ -101,6 +102,9 @@ int main (void) {
     USBRegisterRequestHandler(REQTYPE_TYPE_VENDOR, adis_ctrl, abClassReqData);
     USBHwConnect(true);
 
+    /*! user manual p171: GPIO0 and GPIO2 interrupts share the same VIC slot with the
+     *   External Interrupt 3 event.
+     */
     VIC_SET_EINT3_GPIO_HANDLER(adis_isr);
     ENABLE_INT(VIC_EINT3_GPIO);
 	//  printf_lpc(UART0, "\n*** Init pins for ADIS\r\n");

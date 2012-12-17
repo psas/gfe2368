@@ -24,7 +24,7 @@ typedef struct axis_data{
 	int16_t x;
 	int16_t y;
 	int16_t z;
-	BOOL modified;
+	bool modified;
 } axis_data;
 
 typedef enum {GO=0, STOP, RESET} runstate_type;

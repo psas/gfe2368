@@ -3,7 +3,8 @@
 # common make command for testing
 #
 
-GCC_VERSION     ?= 4.5.2
+#GCC_VERSION     ?= 4.5.2
+GCC_VERSION     ?= $(shell $(CC) -dumpversion | gawk '{print $$1}')
 CROSS           ?= /opt/cross
 CROSSNAME	?= arm-elf
 
@@ -55,7 +56,7 @@ PROGS           = $(NAME).out
 .SUFFIXES : .c .cpp .s
 
 .c.o :
-	@echo "======== COMPILING $@ ========================"
+	@echo "======== COMPILING $@ $(GCC_VERSION) ========================"
 	@$(CC) $(CFLAGS) $<
 
 .s.o :

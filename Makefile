@@ -74,11 +74,11 @@ ASFLAGS         = -ggdb -ahls -mfloat-abi=softfp $(INCLUDE)
 
 .c.o :
 	@echo "========== COMPILING $@ ========================"
-	@$(CC) $(CFLAGS) -o $(<:.c=.o) -c $<
+	$(CC) $(CFLAGS) -o $(<:.c=.o) -c $<
 
 .s.o :
 	@echo "========== COMPILING $@ ========================"
-	@$(AS) $(ASFLAGS) -o $@ $< > $*.lst
+	$(AS) $(ASFLAGS) -o $@ $< > $*.lst
         
 
 all: $(LIBS) $(EXLIBS) Makefile
@@ -93,7 +93,7 @@ $(EXLIBS):
 
 $(LIBS): $(AOBJS) $(COBJS) $(EXLIBS)
 	@echo "======= Making Library $@ ========================"
-	@$(AR) $(ARCHIVEFLAGS) $@ $(AOBJS) $(COBJS)
+	$(AR) $(ARCHIVEFLAGS) $@ $(AOBJS) $(COBJS)
 
 $(TESTS): $(LIBS) $(ASRCS) $(CSRCS) $(TESTSRCS)
 	@echo "===== Recursive make: $(@D) ========================"

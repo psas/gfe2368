@@ -31,13 +31,14 @@ arm7_9 dcc_downloads enable
 sleep 100
 poll
 
-
+# this might not work on older version of openocd? < 0.6.1?
+arm7_9 fast_memory_access enable
 
 # Print out the first 100 bytes of memory
 mdh 0x0 100
 flash probe 0
 # erase the first 14 sectors, the remaining sectors will be used for non-volitile storage
-flash erase_sector 0 0 26
+flash erase_sector 0 0 7
 flash erase_check 0
 sleep 100
 mdh 0x0 100

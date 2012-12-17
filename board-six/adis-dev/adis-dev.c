@@ -24,37 +24,38 @@ void adis_cb(spi_master_xact_data* caller, spi_master_xact_data* spi_xact, void*
     //REQUIRES ADDITIONAL PYLONS
 
 
-    int bytes_sent = USBHwEPWrite (BULK0_IN_EP, spi_xact->readbuf, ADIS_PACKET_LENGTH);
-    if(bytes_sent != ADIS_PACKET_LENGTH){
-        uart0_putstring("\n%s: ***ADIS WRITE DATA TO USB FAILED***\n", __func__);
-    }
+//    int bytes_sent = USBHwEPWrite (BULK0_IN_EP, spi_xact->readbuf, ADIS_PACKET_LENGTH);
+//    if(bytes_sent != ADIS_PACKET_LENGTH){
+//        uart0_putstring("\n***ADIS WRITE DATA TO USB FAILED***\n");
+//    }
     getting_data = false;
 }
 
 
-static bool adis_ctrl(TSetupPacket *pSetup, int *piLen, uint8_t **ppbData){
-    //todo: set sensors to idle/power_down on INST_STOP
-    switch(IMU_INST(pSetup->bRequest)){
-    case INST_RESET:
-        break;
-    case INST_GO:
-        IO2IntEnR |= ADIS_DRDY;
-        GREEN_LED_ON;
-        break;
-    case INST_STOP:
-        IO0IntEnR &= ~(ADIS_DRDY);
-        GREEN_LED_OFF;
-        break;
-    case INST_SET_SPEED:
-        break;
-    default:
-        break;
-    }
-    return true;
-}
+//static bool adis_ctrl(TSetupPacket *pSetup, int *piLen, uint8_t **ppbData){
+//    //! \todo: set sensors to idle/power_down on INST_STOP
+//    switch(IMU_INST(pSetup->bRequest)){
+//    case INST_RESET:
+//        break;
+//    case INST_GO:
+//        IO2IntEnR |= ADIS_DRDY;
+//        GREEN_LED_ON;
+//        break;
+//    case INST_STOP:
+//        IO0IntEnR &= ~(ADIS_DRDY);
+//        GREEN_LED_OFF;
+//        break;
+//    case INST_SET_SPEED:
+//        break;
+//    default:
+//        break;
+//    }
+//    return true;
+//}
 
 void adis_isr(void) {
     //uint32_t timestamp = T0TC;
+    uart0_putstring("\n***adis_isr***\n");
 
     //IO0IntStatR for pin interrupt status
     //IO0IntClr to clear interrupt
@@ -97,19 +98,22 @@ int main (void) {
 
 	SCK_HIGH;
 
-    USBInit(imu_descriptor);
-    uint8_t abClassReqData[MAX_PACKET_SIZE0];
-    USBRegisterRequestHandler(REQTYPE_TYPE_VENDOR, adis_ctrl, abClassReqData);
-    USBHwConnect(true);
+//    USBInit(imu_descriptor);
+//    uint8_t abClassReqData[MAX_PACKET_SIZE0];
+//    USBRegisterRequestHandler(REQTYPE_TYPE_VENDOR, adis_ctrl, abClassReqData);
+//    USBHwConnect(true);
 
-    /*! user manual p171: GPIO0 and GPIO2 interrupts share the same VIC slot with the
-     *   External Interrupt 3 event.
-     */
-    VIC_SET_EINT3_GPIO_HANDLER(adis_isr);
-    ENABLE_INT(VIC_EINT3_GPIO);
+
 	//  printf_lpc(UART0, "\n*** Init pins for ADIS\r\n");
 	adis_init();
-
+//	printf_lpc(UART0, "PINSEL4 is: 0x%x\n", PINSEL4);
+//	printf_lpc(UART0, "PINMODE4 is: 0x%x\n", PINMODE4);
+	/*! user manual p171: GPIO0 and GPIO2 interrupts share the same VIC slot with the
+	 *   External Interrupt 3 event.
+	 */
+	IO2IntEnR = (1<<10);
+	VIC_SET_EINT3_GPIO_HANDLER(adis_isr);
+	ENABLE_INT(VIC_EINT3_GPIO);
 	//  printf_lpc(UART0, "\n*** Reset ADIS\r\n");
 	adis_reset();
 
@@ -129,7 +133,7 @@ int main (void) {
 	    color_led_flash(5, RED_LED, FLASH_FAST);
 //		adis_process_done_q();
 //		// printf_lpc(UART0,"2 SLOW flashes...red, blue then green\r\n");
-//		printf_lpc(UART0,".");
+		printf_lpc(UART0,".");
 //		//  adis_process_done_q();
 //		//       color_led_flash(2, RED_LED, FLASH_NORMAL ) ;
 //		//        RED_LED_OFF;

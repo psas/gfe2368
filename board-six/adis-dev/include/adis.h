@@ -30,8 +30,8 @@
  */
 
 #define     GPIO_PINSEL0                    0b00
-#define     EINT0_PINSEL4                   0b00
-#define     EINT1_PINSEL4                   0b00
+#define     EINT0_PINSEL4                   0b01
+#define     EINT1_PINSEL4                   0b01
 
 #define     P0_0_PINSEL0                    0
 #define     P0_5_PINSEL0                    10

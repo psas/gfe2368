@@ -103,6 +103,7 @@ int main (void) {
 //    USBRegisterRequestHandler(REQTYPE_TYPE_VENDOR, adis_ctrl, abClassReqData);
 //    USBHwConnect(true);
 
+	adis_reset();
 
 	//  printf_lpc(UART0, "\n*** Init pins for ADIS\r\n");
 	adis_init();
@@ -111,25 +112,35 @@ int main (void) {
 	/*! user manual p171: GPIO0 and GPIO2 interrupts share the same VIC slot with the
 	 *   External Interrupt 3 event.
 	 */
-	IO2IntEnR = (1<<10);
-	VIC_SET_EINT3_GPIO_HANDLER(adis_isr);
-	ENABLE_INT(VIC_EINT3_GPIO);
+
 	//  printf_lpc(UART0, "\n*** Reset ADIS\r\n");
-	adis_reset();
 
 	//  printf_lpc(UART0,"\n*** Initialize SPI ***\r\n" );
 
 	//  dummy_spi_xact();
 
-	adis_read_smpl_prd();
+	//adis_read_smpl_prd();
+
+	//adis_read_id();
+	adis_read_gpio_ctl();
 
 	adis_read_id();
 
-	//adis_read_brst_mode();
 
-	util_wait_msecs(1000);  // printf gets in the way of SPI interrupt or vice-versa.
+	adis_read_brst_mode(adis_cb);
+	adis_read_brst_mode(adis_cb);
 
-	while(1) {
+
+//	adis_read_brst_mode();
+
+	//util_wait_msecs(1000);  // printf gets in the way of SPI interrupt or vice-versa.
+
+//
+//		VIC_SET_EINT3_GPIO_HANDLER(adis_isr);
+//		ENABLE_INT(VIC_EINT3_GPIO);
+//		IO2IntEnR = (1<<10);
+
+		while(1) {
 	    color_led_flash(5, RED_LED, FLASH_FAST);
 //		adis_process_done_q();
 //		// printf_lpc(UART0,"2 SLOW flashes...red, blue then green\r\n");

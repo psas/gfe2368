@@ -67,6 +67,7 @@
 #define     ADIS_IMU_LEDFLASHES              3
 
 #define     ADIS_MAX_DATA_BUFFER             50
+#define     ADIS_NUM_DATAOUT_REGS            12
 
 // ADIS Registers
 typedef enum {
@@ -165,6 +166,7 @@ void adis_reset();
 void adis_read_smpl_prd() ;
 void adis_read_brst_mode() ;
 void adis_read_id() ;
+void adis_read_gpio_ctl();
 
 void adis_read_intr(adis_spi_xact* s) ;
 

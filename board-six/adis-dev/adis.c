@@ -12,6 +12,11 @@
 
 Ringbuffer                adis_spi_done_q;
 
+
+spi_master_xact_data      adis_read_gpio_xact;
+
+spi_master_xact_data      adis_write_gpio_xact;
+
 spi_master_xact_data      adis_read_id_xact;
 spi_master_xact_data      adis_read_smpl_prd_xact;
 
@@ -164,8 +169,17 @@ static adis_regaddr adis_create_read_addr(adis_regaddr s) {
 	return (s & 0b01111111);
 }
 
+/*! \brief Create a write address
+ *
+ * @param s
+ * @return  formatted write address for adis
+ */
+static adis_regaddr adis_create_write_addr(adis_regaddr s) {
+	return (s | 0b10000000);
+}
 
 void adis_read_brst_mode(SPI_XACT_FnCallback cb) {
+	bool success = false;
 
 	spi_init_master_xact_data(&adis_read_brst_mode_xact);
 
@@ -176,11 +190,14 @@ void adis_read_brst_mode(SPI_XACT_FnCallback cb) {
 	adis_read_brst_mode_xact.writebuf[0]     = adis_create_read_addr(ADIS_GLOB_CMD);
 	adis_read_brst_mode_xact.writebuf[1]     = 0x0;
 	adis_read_brst_mode_xact.write_numbytes  = 2;
-	adis_read_brst_mode_xact.read_numbytes   = 38;
+	adis_read_brst_mode_xact.read_numbytes   = (ADIS_NUM_DATAOUT_REGS * 2)+1;
 	adis_read_brst_mode_xact.dummy_value     = 0x7f;
 
 	// Start the transaction
-	start_spi_master_xact_intr(&adis_read_brst_mode_xact, cb) ;
+	success = start_spi_master_xact_intr(&adis_read_brst_mode_xact, cb) ;
+	if(!success) {
+		uart0_putstring("burst fail\n");
+	}
 
 }
 
@@ -213,6 +230,7 @@ void adis_read_id() {
 	adis_read_id_xact.spi_lsbf_val    = SPI_DATA_MSB_FIRST;
 
 	adis_read_id_xact.writebuf[0]     = adis_create_read_addr(ADIS_PRODUCT_ID);
+//	printf_lpc(UART0, "read addr is: 0x%x\n", adis_read_id_xact.writebuf[0]);
 	adis_read_id_xact.writebuf[1]     = 0x0;
 	adis_read_id_xact.write_numbytes  = 2;
 	adis_read_id_xact.read_numbytes   = 3;
@@ -222,4 +240,41 @@ void adis_read_id() {
 	start_spi_master_xact_intr(&adis_read_id_xact, adis_read_cb) ;
 }
 
+void adis_read_gpio_ctl() {
+
+	spi_init_master_xact_data(&adis_read_id_xact);
+
+	adis_read_gpio_xact.spi_cpha_val    = SPI_SCK_SECOND_CLK;
+	adis_read_gpio_xact.spi_cpol_val    = SPI_SCK_ACTIVE_HIGH;
+	adis_read_gpio_xact.spi_lsbf_val    = SPI_DATA_MSB_FIRST;
+
+	adis_read_gpio_xact.writebuf[0]     = adis_create_read_addr(ADIS_GPIO_CTRL);
+//	printf_lpc(UART0, "read addr is: 0x%x\n", adis_read_id_xact.writebuf[0]);
+	adis_read_gpio_xact.writebuf[1]     = 0x0;
+	adis_read_gpio_xact.write_numbytes  = 2;
+	adis_read_gpio_xact.read_numbytes   = 3;
+	adis_read_gpio_xact.dummy_value     = 0x7f;
+
+	// Start the transaction
+	start_spi_master_xact_intr(&adis_read_gpio_xact, adis_read_cb) ;
+}
+
+void adis_write_gpio_ctl() {
+
+	spi_init_master_xact_data(&adis_read_id_xact);
+
+	adis_write_gpio_xact.spi_cpha_val    = SPI_SCK_SECOND_CLK;
+	adis_write_gpio_xact.spi_cpol_val    = SPI_SCK_ACTIVE_HIGH;
+	adis_write_gpio_xact.spi_lsbf_val    = SPI_DATA_MSB_FIRST;
+
+	adis_write_gpio_xact.writebuf[0]     = adis_create_write_addr(ADIS_GPIO_CTRL);
+	printf_lpc(UART0, "read addr is: 0x%x\n", adis_write_gpio_xact.writebuf[0]);
+	adis_write_gpio_xact.writebuf[1]     = 0x0;
+	adis_write_gpio_xact.write_numbytes  = 2;
+	adis_write_gpio_xact.read_numbytes   = 0;
+	adis_write_gpio_xact.dummy_value     = 0x7f;
+
+	// Start the transaction
+	start_spi_master_xact_intr(&adis_write_gpio_xact, adis_read_cb) ;
+}
 

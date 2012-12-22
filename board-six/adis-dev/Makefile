@@ -12,6 +12,7 @@ INCLUDE         := -I.\
                    -I$(LPCLIBDIR)/include\
                    -I$(LIBDIR)/include \
                    -I$(LPCLIBDIR)/lpc23xx-usb/include\
+                   -I$(LPCLIBDIR)/external-devices/include
 
 GFE_BOARD_NUM   := -DBOARD_SIX
 CSRCS           :=  adis.c

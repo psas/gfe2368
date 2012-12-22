@@ -10,7 +10,7 @@
 #include "ringbuffer.h"
 
 
- /*! Pin connections between ADIS and LPC2368
+/*! Pin connections between ADIS and LPC2368 on GFE board #6
 
     LPC23xx       (ADIS)         LPC2368 PIN    ADIS PIN
     -------------------------------------------------
@@ -29,45 +29,43 @@
     ---------------------------------------------
  */
 
-#define     GPIO_PINSEL0                    0b00
-#define     EINT0_PINSEL4                   0b01
-#define     EINT1_PINSEL4                   0b01
+#define     GPIO_PINSEL0                      0b00
+#define     EINT0_PINSEL4                     0b01
+#define     EINT1_PINSEL4                     0b01
 
-#define     P0_0_PINSEL0                    0
-#define     P0_5_PINSEL0                    10
-#define     P0_6_PINSEL0                    12
-#define     P1_29_PINSEL3                   26
-#define     P2_10_PINSEL4                   20
-#define     P2_11_PINSEL4                   22
+#define     P0_0_PINSEL0                      0
+#define     P0_5_PINSEL0                      10
+#define     P0_6_PINSEL0                      12
+#define     P1_29_PINSEL3                     26
+#define     P2_10_PINSEL4                     20
+#define     P2_11_PINSEL4                     22
 
 #define     PINSEL_ADIS_RESET                 (PINSEL3  = (PINSEL3  & ~(0x3 << P1_29_PINSEL3)) | (GPIO_PINSEL0   << P1_29_PINSEL3))
 #define     PINMODE_ADIS_RESET_PULLUP         (PINMODE3 = (PINMODE3 & ~(0x3 << P1_29_PINSEL3)) | (P0_PULLUP_MODE << P1_29_PINSEL3))
 #define     PINMODE_ADIS_RESET_NOPULL         (PINMODE3 = (PINMODE3 & ~(0x3 << P1_29_PINSEL3)) | (P0_NOPULL_MODE << P1_29_PINSEL3))
 
-#define     PINSEL_ADIS_EINT0_DIO1          (PINSEL4  = (PINSEL4  & ~(0x3 << P2_10_PINSEL4)) | (EINT0_PINSEL4  << P2_10_PINSEL4))
-#define     PINMODE_ADIS_EINT0_DIO1_NOPULL  (PINMODE4 = (PINMODE4 & ~(0x3 << P2_10_PINSEL4)) | (P0_NOPULL_MODE << P2_10_PINSEL4))
+#define     PINSEL_ADIS_EINT0_DIO1            (PINSEL4  = (PINSEL4  & ~(0x3 << P2_10_PINSEL4)) | (EINT0_PINSEL4  << P2_10_PINSEL4))
+#define     PINMODE_ADIS_EINT0_DIO1_NOPULL    (PINMODE4 = (PINMODE4 & ~(0x3 << P2_10_PINSEL4)) | (P0_NOPULL_MODE << P2_10_PINSEL4))
 
-#define     PINSEL_ADIS_EINT1_DIO2          (PINSEL4  = (PINSEL4  & ~(0x3 << P2_11_PINSEL4)) | (EINT1_PINSEL4  << P2_11_PINSEL4))
-#define     PINMODE_ADIS_EINT1_DIO2_NOPULL  (PINMODE4 = (PINMODE4 & ~(0x3 << P2_11_PINSEL4)) | (P0_NOPULL_MODE << P2_11_PINSEL4))
+#define     PINSEL_ADIS_EINT1_DIO2            (PINSEL4  = (PINSEL4  & ~(0x3 << P2_11_PINSEL4)) | (EINT1_PINSEL4  << P2_11_PINSEL4))
+#define     PINMODE_ADIS_EINT1_DIO2_NOPULL    (PINMODE4 = (PINMODE4 & ~(0x3 << P2_11_PINSEL4)) | (P0_NOPULL_MODE << P2_11_PINSEL4))
 
-#define     PINSEL_ADIS_DIO3                (PINSEL0  = (PINSEL0  & ~(0x3 << P0_5_PINSEL0))  | (GPIO_PINSEL0   << P0_5_PINSEL0))
-#define     PINMODE_ADIS_DIO3_PULLUP        (PINMODE0 = (PINMODE0 & ~(0x3 << P0_5_PINSEL0))  | (P0_PULLUP_MODE << P0_5_PINSEL0))
+#define     PINSEL_ADIS_DIO3                  (PINSEL0  = (PINSEL0  & ~(0x3 << P0_5_PINSEL0))  | (GPIO_PINSEL0   << P0_5_PINSEL0))
+#define     PINMODE_ADIS_DIO3_PULLUP          (PINMODE0 = (PINMODE0 & ~(0x3 << P0_5_PINSEL0))  | (P0_PULLUP_MODE << P0_5_PINSEL0))
 
-#define     PINSEL_ADIS_DIO4                (PINSEL0  = (PINSEL0  & ~(0x3 << P0_6_PINSEL0))  | (GPIO_PINSEL0   << P0_6_PINSEL0))
-#define     PINMODE_ADIS_DIO4_PULLUP        (PINMODE0 = (PINMODE0 & ~(0x3 << P0_6_PINSEL0))  | (P0_PULLUP_MODE << P0_6_PINSEL0))
+#define     PINSEL_ADIS_DIO4                  (PINSEL0  = (PINSEL0  & ~(0x3 << P0_6_PINSEL0))  | (GPIO_PINSEL0   << P0_6_PINSEL0))
+#define     PINMODE_ADIS_DIO4_PULLUP          (PINMODE0 = (PINMODE0 & ~(0x3 << P0_6_PINSEL0))  | (P0_PULLUP_MODE << P0_6_PINSEL0))
 
 
-#define     FIO_ADIS_RESET_OUTPUT            (FIO1DIR |= (1<<29))
+#define     FIO_ADIS_RESET_OUTPUT             (FIO1DIR |= (1<<29))
 
-#define     ADIS_RESET_HIGH                  (FIO1SET |= (1<<29))
-#define     ADIS_RESET_LOW                   (FIO1CLR |= (1<<29))
+#define     ADIS_RESET_HIGH                   (FIO1SET |= (1<<29))
+#define     ADIS_RESET_LOW                    (FIO1CLR |= (1<<29))
 
-#define     ADIS_RESET_MSECS                 500
+#define     ADIS_RESET_MSECS                  500
 
-#define     ADIS_IMU_LEDFLASHES              3
-
-#define     ADIS_MAX_DATA_BUFFER             50
-#define     ADIS_NUM_DATAOUT_REGS            12
+#define     ADIS_MAX_DATA_BUFFER              50
+#define     ADIS_NUM_DATAOUT_REGS             12
 
 // ADIS Registers
 typedef enum {
@@ -118,8 +116,8 @@ typedef struct {
 	adis_regaddr        regaddr;
 	uint8_t             cmd;
 	SPI_XACT_FnCallback cb_fn;
-    uint8_t             num_readbytes;
-    uint8_t             num_writebytes;
+	uint8_t             num_readbytes;
+	uint8_t             num_writebytes;
 } adis_spi_xact;
 
 typedef struct {
@@ -128,8 +126,8 @@ typedef struct {
 } adis16D_cache_line;
 
 typedef struct {
-    adis16D_cache_line adis_id;
-    adis16D_cache_line adis_sampl_per;
+	adis16D_cache_line adis_id;
+	adis16D_cache_line adis_sampl_per;
 } adis16D_cache;
 
 typedef struct {
@@ -139,10 +137,11 @@ typedef struct {
 } adis_cache_line;
 
 typedef struct {
-    adis_cache_line adis_prod_id;
-    adis_cache_line adis_sampl_per;
-
+	adis_cache_line adis_prod_id;
+	adis_cache_line adis_sampl_per;
 } adis_cache;
+
+/* extern declarations for interface */
 
 extern Ringbuffer                adis_spi_done_q;
 
@@ -153,6 +152,9 @@ extern adis_cache                adis_data_cache;
 
 extern spi_ctl                   adis_spi_ctl;
 
+
+/* function prototypes */
+
 void adis_process_done_q() ;
 
 void adis_read_cb(spi_master_xact_data* caller, spi_master_xact_data* spi_xact, void* data) ;
@@ -162,6 +164,8 @@ void adis_init() ;
 void adis_process_done_q() ;
 
 void adis_reset();
+
+void adis_write_smpl_prd(uint8_t time_base, uint8_t sample_prd) ;
 
 void adis_read_smpl_prd() ;
 void adis_read_brst_mode() ;

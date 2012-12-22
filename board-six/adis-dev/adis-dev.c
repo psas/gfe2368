@@ -54,25 +54,24 @@ void adis_cb(spi_master_xact_data* caller, spi_master_xact_data* spi_xact, void*
 //}
 
 void adis_isr(void) {
-    //uint32_t timestamp = T0TC;
-    uart0_putstring("\n***adis_isr***\n");
-
-    //IO0IntStatR for pin interrupt status
-    //IO0IntClr to clear interrupt
-    if((IO2IntStatR & ADIS_DRDY) ){
-        //uart0_putstring("L3G\n");
-        //ADIS_timestamp = timestamp;
-        adis_read_brst_mode(adis_cb);
-        IO2IntClr = ADIS_DRDY;
-    }
-    EXIT_INTERRUPT;
+	//uint32_t timestamp = T0TC;
+	//uart0_putstring("*");
+	//IO0IntStatR for pin interrupt status
+	//IO0IntClr to clear interrupt
+	if((IO2IntStatR & ADIS_DRDY) ){
+		//uart0_putstring("L3G\n");
+		//ADIS_timestamp = timestamp;
+		adis_read_brst_mode(adis_cb);
+		IO2IntClr = ADIS_DRDY;
+	}
+	EXIT_INTERRUPT;
 }
 
 int main (void) {
 
 	pllstart_seventytwomhz() ;
 	//  pllstart_sixtymhz() ;
-	//pllstart_fourtyeightmhz() ;
+	//  pllstart_fourtyeightmhz() ;
 
 	info_init();
 
@@ -88,7 +87,6 @@ int main (void) {
 	BLUE_LED_OFF;
 	GREEN_LED_OFF;
 
-
 	// util_wait_msecs(2000);
 	adis_spi_ctl.spi_cpol_val = SPI_SCK_ACTIVE_HIGH;
 	adis_spi_ctl.spi_cpha_val = SPI_SCK_SECOND_CLK;
@@ -98,60 +96,37 @@ int main (void) {
 
 	SCK_HIGH;
 
-//    USBInit(imu_descriptor);
-//    uint8_t abClassReqData[MAX_PACKET_SIZE0];
-//    USBRegisterRequestHandler(REQTYPE_TYPE_VENDOR, adis_ctrl, abClassReqData);
-//    USBHwConnect(true);
+	//    USBInit(imu_descriptor);
+	//    uint8_t abClassReqData[MAX_PACKET_SIZE0];
+	//    USBRegisterRequestHandler(REQTYPE_TYPE_VENDOR, adis_ctrl, abClassReqData);
+	//    USBHwConnect(true);
 
 	adis_reset();
 
-	//  printf_lpc(UART0, "\n*** Init pins for ADIS\r\n");
 	adis_init();
-//	printf_lpc(UART0, "PINSEL4 is: 0x%x\n", PINSEL4);
-//	printf_lpc(UART0, "PINMODE4 is: 0x%x\n", PINMODE4);
+
+	// Testing some register reads and a write.
+	adis_read_id();
+	adis_read_gpio_ctl();
+	adis_write_smpl_prd(0, 5);
+	adis_read_smpl_prd();
+
+	// Wait for all transactions to complete before enabling interrupts.
+	util_wait_msecs(2000);
+
 	/*! user manual p171: GPIO0 and GPIO2 interrupts share the same VIC slot with the
 	 *   External Interrupt 3 event.
 	 */
+	VIC_SET_EINT3_GPIO_HANDLER(adis_isr);
+	ENABLE_INT(VIC_EINT3_GPIO);
+	IO2IntEnR = (1<<10);
 
-	//  printf_lpc(UART0, "\n*** Reset ADIS\r\n");
-
-	//  printf_lpc(UART0,"\n*** Initialize SPI ***\r\n" );
-
-	//  dummy_spi_xact();
-
-	//adis_read_smpl_prd();
-
-	//adis_read_id();
-	adis_read_gpio_ctl();
-
-	adis_read_id();
-
-
-	adis_read_brst_mode(adis_cb);
-	adis_read_brst_mode(adis_cb);
-
-
-//	adis_read_brst_mode();
-
-	//util_wait_msecs(1000);  // printf gets in the way of SPI interrupt or vice-versa.
-
-//
-//		VIC_SET_EINT3_GPIO_HANDLER(adis_isr);
-//		ENABLE_INT(VIC_EINT3_GPIO);
-//		IO2IntEnR = (1<<10);
-
-		while(1) {
-	    color_led_flash(5, RED_LED, FLASH_FAST);
-//		adis_process_done_q();
-//		// printf_lpc(UART0,"2 SLOW flashes...red, blue then green\r\n");
-		printf_lpc(UART0,".");
-//		//  adis_process_done_q();
-//		//       color_led_flash(2, RED_LED, FLASH_NORMAL ) ;
-//		//        RED_LED_OFF;
-//		//        color_led_flash(2, BLUE_LED,  FLASH_NORMAL ) ;
-//		//        BLUE_LED_OFF;
-//		color_led_flash(2, GREEN_LED, FLASH_NORMAL ) ;
-
+	while(1) {
+		color_led_flash(5, RED_LED, FLASH_FAST);
+//		util_wait_msecs(1000);
+//		color_led_flash(5, BLUE_LED, FLASH_FAST);
+//		util_wait_msecs(1000);
+		//adis_process_done_q();
 	}
 
 	return(0);

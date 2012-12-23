@@ -2,40 +2,41 @@
 /*! \file adis-usb-bulk.h
  */
 
-
-
 #ifndef _ADIS_DEV_H
 #define _ADIS_DEV_H
 
 #include "lpc23xx-usb.h"
 
-#define BULK0_IN_EP 0x82
+#define ADIS_DRDY               (1<<10)
 
-#define ADIS_DRDY (1<<10)
+#define ADIS_MAX_PACKET_SIZE    64
 
-#define CTRL_OUT_EP             0x00
 #define ADDR_ACC                0x80
 #define ADDR_GYR                0x40
 #define ADDR_MAG                0x20
 #define ADDR_CAC                0x10
 #define ADDR_ALL                0xF0
-#define INST_RESET              0x01
-#define INST_GO                 0x02
-#define INST_STOP               0x03
-#define INST_SET_SPEED          0x04
 
 #define IMU_INST(X)             ((X) & 0x0F)
 #define IMU_ADDR(X)             ((X) & 0xF0)
 
-#define ADIS_PACKET_LENGTH 24
-void adis_dev_isr(void) __attribute__ ((interrupt("IRQ")));
-
-#define MAX_PACKET_SIZE 64
-
 #define LE_WORD(x)              ((x)&0xFF),((x)>>8)
 
+typedef enum {
+	INST_RESET       = 0x01,
+	INST_GO          = 0x02,
+	INST_STOP        = 0x03,
+	INST_SET_SPEED   = 0x04
+} adis_usb_bulk_instruction;
 
-static const uint8_t imu_descriptor[] = {
+typedef enum {
+	CTRL_OUT_EP      = 0x00,
+	BULK0_IN_EP      = 0x82
+} adis_usb_endpoint;
+
+void adis_dev_isr(void) __attribute__ ((interrupt("IRQ")));
+
+static const uint8_t adis_usb_bulk_descriptor[] = {
 
     // device descriptor
     0x12,
@@ -76,10 +77,10 @@ static const uint8_t imu_descriptor[] = {
     // Accelerometer isoc in ep
     0x07,
     DESC_ENDPOINT,
-    BULK0_IN_EP,                         // bEndpointAddress
-    0x02,                                // bmAttributes = bulk
-    LE_WORD(ADIS_PACKET_LENGTH),         // wMaxPacketSize
-    0x01,                                // bInterval
+    BULK0_IN_EP,                           // bEndpointAddress
+    0x02,                                  // bmAttributes = bulk
+    LE_WORD(2* ADIS_NUM_BURSTREAD_REGS),   // wMaxPacketSize
+    0x01,                                  // bInterval
 
     // string descriptors
     0x04,                                //bLength
@@ -96,12 +97,13 @@ static const uint8_t imu_descriptor[] = {
 
     0x1A,
     DESC_STRING,
-    'A', 0, 'V', 0, '3', 0, ' ', 0, 'O', 0, 'c', 0, 't', 0, ' ', 0, '2', 0,
+    'G', 0, 'F', 0, 'E', 0, ' ', 0, 'D', 0, 'e', 0, 'c', 0, ' ', 0, '2', 0,
     '0', 0, '1', 0, '2', 0,
 
     // terminating zero
     0
 };
+
 
 #endif
 

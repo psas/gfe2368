@@ -16,53 +16,59 @@
 #include "gfe2368-util.h"
 
 #include "ADIS16405.h"
+
 #include "adis-usb-bulk.h"
 
-bool getting_data = false;
+
+static inline void adis_enable_dio1_isr() {
+	IO2IntEnR |= ADIS_DRDY;
+}
+
+static inline void adis_disable_dio1_isr() {
+	IO0IntEnR      &= ~(ADIS_DRDY);
+}
 
 void adis_dev_cb(spi_master_xact_data* caller, spi_master_xact_data* spi_xact, void* data){
 	//REQUIRES ADDITIONAL PYLONS
 
+	int bytes_sent = USBHwEPWrite (BULK0_IN_EP, spi_xact->readbuf, (2 * ADIS_NUM_BURSTREAD_REGS));
 
-	//    int bytes_sent = USBHwEPWrite (BULK0_IN_EP, spi_xact->readbuf, ADIS_PACKET_LENGTH);
-	//    if(bytes_sent != ADIS_PACKET_LENGTH){
-	//        uart0_putstring("\n***ADIS WRITE DATA TO USB FAILED***\n");
-	//    }
-	getting_data = false;
+	if(bytes_sent != (2 * ADIS_NUM_BURSTREAD_REGS)){
+		uart0_putstring("\n***ADIS WRITE DATA TO USB FAILED***\n");
+	}
 }
 
 
-//static bool adis_ctrl(TSetupPacket *pSetup, int *piLen, uint8_t **ppbData){
-//    //! \todo: set sensors to idle/power_down on INST_STOP
-//    switch(IMU_INST(pSetup->bRequest)){
-//    case INST_RESET:
-//        break;
-//    case INST_GO:
-//        IO2IntEnR |= ADIS_DRDY;
-//        GREEN_LED_ON;
-//        break;
-//    case INST_STOP:
-//        IO0IntEnR &= ~(ADIS_DRDY);
-//        GREEN_LED_OFF;
-//        break;
-//    case INST_SET_SPEED:
-//        break;
-//    default:
-//        break;
-//    }
-//    return true;
-//}
+static bool adis_ctrl(TSetupPacket *pSetup, int *piLen, uint8_t **ppbData){
+	//! \todo: set sensors to idle/power_down on INST_STOP
+	switch(IMU_INST(pSetup->bRequest)){
+		case INST_RESET:
+			break;
+		case INST_GO:
+			adis_enable_dio1_isr();
+			GREEN_LED_ON;
+			break;
+		case INST_STOP:
+			adis_disable_dio1_isr();
+			GREEN_LED_OFF;
+			break;
+		case INST_SET_SPEED:
+			break;
+		default:
+			break;
+	}
+	return true;
+}
 
 /*! \brief enable the DIO1 interrupt from ADIS
  *
  */
-static void adis_dev_enable_dio1() {
+static inline void adis_register_dio1_isr() {
 	/*! user manual p171: GPIO0 and GPIO2 interrupts share the same VIC slot with the
 	 *   External Interrupt 3 event.
 	 */
 	VIC_SET_EINT3_GPIO_HANDLER(adis_dev_isr);
 	ENABLE_INT(VIC_EINT3_GPIO);
-	IO2IntEnR = (1<<10);
 }
 
 void adis_dev_isr(void) {
@@ -89,9 +95,9 @@ int main (void) {
 
 	uart0_init_115200() ;
 
-	printf_lpc(UART0,"\n***Starting adis-dev test ***\r\n\r\n");
+	printf_lpc(UART0,"\n***Starting adis-usb-bulk test ***\r\n\r\n");
 
-	printf_lpc(UART0,"\n***Board is defined as: %s ***\r\n", infoquery_gfe_boardtag() );
+	//printf_lpc(UART0,"\n***Board is defined as: %s ***\r\n", infoquery_gfe_boardtag() );
 
 	init_color_led();
 
@@ -104,10 +110,10 @@ int main (void) {
 
 	SCK_HIGH;
 
-	//    USBInit(imu_descriptor);
-	//    uint8_t abClassReqData[MAX_PACKET_SIZE0];
-	//    USBRegisterRequestHandler(REQTYPE_TYPE_VENDOR, adis_ctrl, abClassReqData);
-	//    USBHwConnect(true);
+	USBInit(adis_usb_bulk_descriptor);
+	uint8_t abClassReqData[MAX_PACKET_SIZE0];
+	USBRegisterRequestHandler(REQTYPE_TYPE_VENDOR, adis_ctrl, abClassReqData);
+	USBHwConnect(true);
 
 	adis_reset();
 
@@ -122,16 +128,14 @@ int main (void) {
 	// Wait for all transactions to complete before enabling interrupts.
 	util_wait_msecs(2000);
 
-	adis_dev_enable_dio1();
+	adis_register_dio1_isr();
+
+	adis_enable_dio1_isr();
 
 	all_led_off();
 	while(1) {
-//		color_led_flash(3, RED_LED, FLASH_FAST);
-//		util_wait_msecs(1000);
 		color_led_flash(2, BLUE_LED, FLASH_SLOW);
 		util_wait_msecs(1500);
-//		color_led_flash(3, BLUE_LED, FLASH_FAST);
-//		util_wait_msecs(1000);
 		//adis_process_done_q();
 	}
 

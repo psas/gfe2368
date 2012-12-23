@@ -3,7 +3,7 @@
 # Makefile for olimex status spiflash
 #
 
-NAME            := adis-dev
+NAME            := adis-usb-bulk
 LPCLIBDIR       := ../../liblpc23xx
 LIBDIR          := ../..
 

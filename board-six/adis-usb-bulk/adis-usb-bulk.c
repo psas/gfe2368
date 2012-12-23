@@ -16,7 +16,7 @@
 #include "gfe2368-util.h"
 
 #include "ADIS16405.h"
-#include "adis-dev.h"
+#include "adis-usb-bulk.h"
 
 bool getting_data = false;
 

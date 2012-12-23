@@ -28,7 +28,7 @@
 #define IMU_ADDR(X)             ((X) & 0xF0)
 
 #define ADIS_PACKET_LENGTH 24
-void adis_isr(void) __attribute__ ((interrupt("IRQ")));
+void adis_dev_isr(void) __attribute__ ((interrupt("IRQ")));
 
 #define MAX_PACKET_SIZE 64
 

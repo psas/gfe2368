@@ -20,15 +20,15 @@
 
 bool getting_data = false;
 
-void adis_cb(spi_master_xact_data* caller, spi_master_xact_data* spi_xact, void* data){
-    //REQUIRES ADDITIONAL PYLONS
+void adis_dev_cb(spi_master_xact_data* caller, spi_master_xact_data* spi_xact, void* data){
+	//REQUIRES ADDITIONAL PYLONS
 
 
-//    int bytes_sent = USBHwEPWrite (BULK0_IN_EP, spi_xact->readbuf, ADIS_PACKET_LENGTH);
-//    if(bytes_sent != ADIS_PACKET_LENGTH){
-//        uart0_putstring("\n***ADIS WRITE DATA TO USB FAILED***\n");
-//    }
-    getting_data = false;
+	//    int bytes_sent = USBHwEPWrite (BULK0_IN_EP, spi_xact->readbuf, ADIS_PACKET_LENGTH);
+	//    if(bytes_sent != ADIS_PACKET_LENGTH){
+	//        uart0_putstring("\n***ADIS WRITE DATA TO USB FAILED***\n");
+	//    }
+	getting_data = false;
 }
 
 
@@ -53,7 +53,19 @@ void adis_cb(spi_master_xact_data* caller, spi_master_xact_data* spi_xact, void*
 //    return true;
 //}
 
-void adis_isr(void) {
+/*! \brief enable the DIO1 interrupt from ADIS
+ *
+ */
+static void adis_dev_enable_dio1() {
+	/*! user manual p171: GPIO0 and GPIO2 interrupts share the same VIC slot with the
+	 *   External Interrupt 3 event.
+	 */
+	VIC_SET_EINT3_GPIO_HANDLER(adis_dev_isr);
+	ENABLE_INT(VIC_EINT3_GPIO);
+	IO2IntEnR = (1<<10);
+}
+
+void adis_dev_isr(void) {
 	//uint32_t timestamp = T0TC;
 	//uart0_putstring("*");
 	//IO0IntStatR for pin interrupt status
@@ -61,7 +73,7 @@ void adis_isr(void) {
 	if((IO2IntStatR & ADIS_DRDY) ){
 		//uart0_putstring("L3G\n");
 		//ADIS_timestamp = timestamp;
-		adis_read_brst_mode(adis_cb);
+		adis_read_brst_mode(adis_dev_cb);
 		IO2IntClr = ADIS_DRDY;
 	}
 	EXIT_INTERRUPT;
@@ -83,10 +95,6 @@ int main (void) {
 
 	init_color_led();
 
-	RED_LED_OFF;
-	BLUE_LED_OFF;
-	GREEN_LED_OFF;
-
 	// util_wait_msecs(2000);
 	adis_spi_ctl.spi_cpol_val = SPI_SCK_ACTIVE_HIGH;
 	adis_spi_ctl.spi_cpha_val = SPI_SCK_SECOND_CLK;
@@ -105,7 +113,7 @@ int main (void) {
 
 	adis_init();
 
-	// Testing some register reads and a write.
+	// Testing some ADIS register reads and a write.
 	adis_read_id();
 	adis_read_gpio_ctl();
 	adis_write_smpl_prd(0, 5);
@@ -114,17 +122,15 @@ int main (void) {
 	// Wait for all transactions to complete before enabling interrupts.
 	util_wait_msecs(2000);
 
-	/*! user manual p171: GPIO0 and GPIO2 interrupts share the same VIC slot with the
-	 *   External Interrupt 3 event.
-	 */
-	VIC_SET_EINT3_GPIO_HANDLER(adis_isr);
-	ENABLE_INT(VIC_EINT3_GPIO);
-	IO2IntEnR = (1<<10);
+	adis_dev_enable_dio1();
 
+	all_led_off();
 	while(1) {
-		color_led_flash(5, RED_LED, FLASH_FAST);
+//		color_led_flash(3, RED_LED, FLASH_FAST);
 //		util_wait_msecs(1000);
-//		color_led_flash(5, BLUE_LED, FLASH_FAST);
+		color_led_flash(2, BLUE_LED, FLASH_SLOW);
+		util_wait_msecs(1500);
+//		color_led_flash(3, BLUE_LED, FLASH_FAST);
 //		util_wait_msecs(1000);
 		//adis_process_done_q();
 	}

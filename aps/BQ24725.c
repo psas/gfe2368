@@ -158,7 +158,7 @@ void BQ24725_SetChargeVoltage(unsigned int mV){
 	uint16_t mV_data = mV & CHARGE_VOLTAGE_MASK;
 
 	xact.device_addr = BQ24725_ADDR;
-	xact.tx_buffer[0] = CHARGE_CURRENT;
+	xact.tx_buffer[0] = CHARGE_VOLTAGE;
 	xact.tx_buffer[1] = LOWDATA_BYTE(mV_data);
 	xact.tx_buffer[2] = HIGHDATA_BYTE(mV_data);
 	xact.write_length = 3;

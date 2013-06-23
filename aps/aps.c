@@ -117,21 +117,21 @@ void settings_BQ(){//todo: verify acok after each step
                 .charge_inhibit = charge_enable
             };
 
-            uart0_putstring("\n");
-            uart0_putstring(util_uitoa(form_options_data(&BQ24725_rocket_init), HEX));
-            uart0_putstring("\n");
-            BQ24725_SetChargeCurrent(0x400);
+//            uart0_putstring("\n");
+//            uart0_putstring(util_uitoa(form_options_data(&BQ24725_rocket_init), HEX));
+//            uart0_putstring("\n");
+            BQ24725_SetChargeCurrent(0x200);
             poll_wait(I2C2);
-            uart0_putstring("set charge current\n");
+//            uart0_putstring("set charge current\n");
             BQ24725_SetChargeVoltage(0x41A0);
             poll_wait(I2C2);
-            uart0_putstring("set charge voltage\n");
-            BQ24725_SetInputCurrent(0x1000);
+//            uart0_putstring("set charge voltage\n");
+            BQ24725_SetInputCurrent(0x800);
             poll_wait(I2C2);
-            uart0_putstring("set input current\n");
+//            uart0_putstring("set input current\n");
             BQ24725_SetChargeOption(&BQ24725_rocket_init);
             poll_wait(I2C2);
-            uart0_putstring("set charge option\n");
+//            uart0_putstring("set charge option\n");
 }
 
 
@@ -246,17 +246,27 @@ bool gpio_request(TSetupPacket *pSetup, int *piLen, uint8_t **ppbData){
 
 void GPIO_isr(void){
     if(IO2IntStatR & (1<<ACOK_PIN)){
-    	reset_bq = true;
-        IO2IntClr |= (1<<ACOK_PIN);
+    	if(FIO2PIN & (1<<ACOK_PIN)){
+			reset_bq = true;
+			IO2IntClr |= (1<<ACOK_PIN);
+			GREEN_LED_ENABLE;
+    	}
     }
+    if(IO2IntStatF & (1<<ACOK_PIN)){
+    	if(!(FIO2PIN & (1<<ACOK_PIN))){
+			IO2IntClr |= (1<<ACOK_PIN);
+			GREEN_LED_DISABLE;
+    	}
+    }
+
     EXIT_INTERRUPT;
 }
 
 void man_dat(uint16_t data){
-    uart0_putstring("\n");
-    uart0_putstring("OPTION: ");
-    uart0_putstring(util_uitoa(data, HEX));
-    uart0_putstring("\n");
+//    uart0_putstring("\n");
+//    uart0_putstring("OPTION: ");
+//    uart0_putstring(util_uitoa(data, HEX));
+//    uart0_putstring("\n");
 }
 
 int main(){
@@ -276,12 +286,14 @@ int main(){
 	//usb_init
 	BQ24725_init(I2C2, DEFAULT);
 	if(FIO2PIN & (1<<ACOK_PIN)){
-	    uart0_putstring("ACOK set on startup\n");
+//	    uart0_putstring("ACOK set on startup\n");
 	    settings_BQ();
+		GREEN_LED_ENABLE;
 	}else{
-		uart0_putstring("ACOK not set on startup\n");
+//		uart0_putstring("ACOK not set on startup\n");
 	}
 	IO2IntEnR |= 1<<ACOK_PIN;
+	IO2IntEnF |= 1<<ACOK_PIN;
 	VIC_SET_EINT3_GPIO_HANDLER(GPIO_isr);
 	ENABLE_INT(VIC_EINT3_GPIO);
 
@@ -291,7 +303,7 @@ int main(){
 	poll_wait(I2C2);
 	BQ24725_GetChargeOption(man_dat);
 	poll_wait(I2C2);
-	 uart0_putstring("past getcharge\n");
+//	 uart0_putstring("past getcharge\n");
 	USBInit(abDescriptors);
 	USBRegisterRequestHandler(REQTYPE_TYPE_VENDOR, gpio_request, abClassReqData);
 	ENABLE_INT(VIC_USB);

@@ -1,3 +1,5 @@
 init
+arm7_9 dcc_downloads enable
+arm7_9 fast_memory_access enable
 reset halt
 wait_halt

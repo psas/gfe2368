@@ -41,6 +41,7 @@ typedef enum sys_mgr_state {INIT, SLEEP, SERIAL, GPIO_USB_INIT, GPIO_USB} sys_mg
 
 static sys_mgr_state state = INIT;
 
+static bool reset_bq = false;
 
 bool find_cmd(char * buffer, char * cmd){// input list?
 	int cmd_index = 0;
@@ -102,8 +103,44 @@ void sys_mgr_sleep(){
     IO0IntEnR &= ~(0x1<<3);
 }
 
+void settings_BQ(){//todo: verify acok after each step
+    BQ24725_charge_options BQ24725_rocket_init = {
+                .ACOK_deglitch_time = t150ms,
+                .WATCHDOG_timer = disabled,
+                .BAT_depletion_threshold = FT70_97pct,
+                .EMI_sw_freq_adj = dec18pct,
+                .EMI_sw_freq_adj_en = sw_freq_adj_disable,
+                .IFAULT_HI_threshold = l700mV,
+                .LEARN_en = LEARN_disable,
+                .IOUT = adapter_current,
+                .ACOC_threshold = l1_66X,
+                .charge_inhibit = charge_enable
+            };
+
+            uart0_putstring("\n");
+            uart0_putstring(util_uitoa(form_options_data(&BQ24725_rocket_init), HEX));
+            uart0_putstring("\n");
+            BQ24725_SetChargeCurrent(0x400);
+            poll_wait(I2C2);
+            uart0_putstring("set charge current\n");
+            BQ24725_SetChargeVoltage(0x41A0);
+            poll_wait(I2C2);
+            uart0_putstring("set charge voltage\n");
+            BQ24725_SetInputCurrent(0x1000);
+            poll_wait(I2C2);
+            uart0_putstring("set input current\n");
+            BQ24725_SetChargeOption(&BQ24725_rocket_init);
+            poll_wait(I2C2);
+            uart0_putstring("set charge option\n");
+}
+
+
 void mainloop(){
 	while(1){
+		if(reset_bq == true){
+			settings_BQ();
+			reset_bq = false;
+		}
 	    color_led_flash(5, RED_LED, FLASH_FAST);
 		switch(state){
 		case SLEEP:
@@ -207,44 +244,10 @@ bool gpio_request(TSetupPacket *pSetup, int *piLen, uint8_t **ppbData){
     return true;
 }
 
-
-void settings_BQ(){//todo: verify acok after each step
-    BQ24725_charge_options BQ24725_rocket_init = {
-                .ACOK_deglitch_time = t150ms,
-                .WATCHDOG_timer = disabled,
-                .BAT_depletion_threshold = FT70_97pct,
-                .EMI_sw_freq_adj = dec18pct,
-                .EMI_sw_freq_adj_en = sw_freq_adj_disable,
-                .IFAULT_HI_threshold = l700mV,
-                .LEARN_en = LEARN_disable,
-                .IOUT = adapter_current,
-                .ACOC_threshold = l1_66X,
-                .charge_inhibit = charge_enable
-            };
-            uart0_putstring("\n");
-            uart0_putstring(util_uitoa(form_options_data(&BQ24725_rocket_init), HEX));
-            uart0_putstring("\n");
-            BQ24725_SetChargeCurrent(0x400);
-            poll_wait(I2C2);
-            uart0_putstring("set charge current\n");
-            BQ24725_SetChargeVoltage(0x41A0);
-            poll_wait(I2C2);
-            uart0_putstring("set charge voltage\n");
-            BQ24725_SetInputCurrent(0x1000);
-            poll_wait(I2C2);
-            uart0_putstring("set input current\n");
-            BQ24725_SetChargeOption(&BQ24725_rocket_init);
-            poll_wait(I2C2);
-            uart0_putstring("set charge option\n");
-}
-
 void GPIO_isr(void){
     if(IO2IntStatR & (1<<ACOK_PIN)){
-        settings_BQ();
-        IO2IntClr &= ~(1<<ACOK_PIN);
-        IO2IntEnR &= ~(1<<ACOK_PIN);
-
-        DISABLE_INT(VIC_EINT3_GPIO);
+    	reset_bq = true;
+        IO2IntClr |= (1<<ACOK_PIN);
     }
     EXIT_INTERRUPT;
 }
@@ -276,11 +279,12 @@ int main(){
 	    uart0_putstring("ACOK set on startup\n");
 	    settings_BQ();
 	}else{
-	    uart0_putstring("ACOK not set on startup\n");
-        IO2IntEnR |= 1<<ACOK_PIN;
-        VIC_SET_EINT3_GPIO_HANDLER(GPIO_isr);
-        ENABLE_INT(VIC_EINT3_GPIO);
+		uart0_putstring("ACOK not set on startup\n");
 	}
+	IO2IntEnR |= 1<<ACOK_PIN;
+	VIC_SET_EINT3_GPIO_HANDLER(GPIO_isr);
+	ENABLE_INT(VIC_EINT3_GPIO);
+
 	BQ24725_GetDeviceID(man_dat);
 	poll_wait(I2C2);
 	BQ24725_GetManufactureID(man_dat);

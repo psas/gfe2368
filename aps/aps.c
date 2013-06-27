@@ -85,6 +85,10 @@ void serial_cb(char * buffer){
         FIO0SET = (1<<RC_TETHER);
     }else if(find_cmd(buffer, "RCTETHERSTFUKTHXBAI")){
         FIO0CLR = (1<<RC_TETHER);
+    }else if(find_cmd(buffer, "RRSTFUKTHXBAI")){
+        FIO0CLR = (1<<ROCKET_READY_PIN);
+    }else if(find_cmd(buffer, "GOGOGADGETRR")){
+        FIO0SET = (1<<ROCKET_READY_PIN);
     }
 }
 
@@ -117,21 +121,21 @@ void settings_BQ(){//todo: verify acok after each step
                 .charge_inhibit = charge_enable
             };
 
-//            uart0_putstring("\n");
-//            uart0_putstring(util_uitoa(form_options_data(&BQ24725_rocket_init), HEX));
-//            uart0_putstring("\n");
-            BQ24725_SetChargeCurrent(0x200);
+            uart0_putstring("\n");
+            uart0_putstring(util_uitoa(form_options_data(&BQ24725_rocket_init), HEX));
+            uart0_putstring("\n");
+            BQ24725_SetChargeCurrent(0x400);
             poll_wait(I2C2);
-//            uart0_putstring("set charge current\n");
+            uart0_putstring("set charge current\n");
             BQ24725_SetChargeVoltage(0x41A0);
             poll_wait(I2C2);
-//            uart0_putstring("set charge voltage\n");
-            BQ24725_SetInputCurrent(0x800);
+            uart0_putstring("set charge voltage\n");
+            BQ24725_SetInputCurrent(0x0A00);
             poll_wait(I2C2);
-//            uart0_putstring("set input current\n");
+            uart0_putstring("set input current\n");
             BQ24725_SetChargeOption(&BQ24725_rocket_init);
             poll_wait(I2C2);
-//            uart0_putstring("set charge option\n");
+            uart0_putstring("set charge option\n");
 }
 
 
@@ -144,12 +148,15 @@ void mainloop(){
 	    color_led_flash(5, RED_LED, FLASH_FAST);
 		switch(state){
 		case SLEEP:
+//			BLUE_LED_OFF;
+//			uart0_putstring("\nENTERED SLEEP MODE\n");
 		    sys_mgr_sleep();
+			BLUE_LED_ON;
 			break;
 		case SERIAL:
 			break;
         case GPIO_USB_INIT:
-//            uart0_putstring("\nENTERED GPIO_USB MODE\n");
+            uart0_putstring("\nENTERED GPIO_USB MODE\n");
 
 //            USBHwConnect(true);
             state = GPIO_USB;
@@ -246,27 +253,23 @@ bool gpio_request(TSetupPacket *pSetup, int *piLen, uint8_t **ppbData){
 
 void GPIO_isr(void){
     if(IO2IntStatR & (1<<ACOK_PIN)){
-    	if(FIO2PIN & (1<<ACOK_PIN)){
-			reset_bq = true;
-			IO2IntClr |= (1<<ACOK_PIN);
-			GREEN_LED_ENABLE;
-    	}
+    	reset_bq = true;
+        IO2IntClr |= (1<<ACOK_PIN);
+        GREEN_LED_ON;
     }
     if(IO2IntStatF & (1<<ACOK_PIN)){
-    	if(!(FIO2PIN & (1<<ACOK_PIN))){
-			IO2IntClr |= (1<<ACOK_PIN);
-			GREEN_LED_DISABLE;
-    	}
+    	reset_bq = true;
+        IO2IntClr |= (1<<ACOK_PIN);
+        GREEN_LED_OFF;
     }
-
     EXIT_INTERRUPT;
 }
 
 void man_dat(uint16_t data){
-//    uart0_putstring("\n");
-//    uart0_putstring("OPTION: ");
-//    uart0_putstring(util_uitoa(data, HEX));
-//    uart0_putstring("\n");
+    uart0_putstring("\n");
+    uart0_putstring("OPTION: ");
+    uart0_putstring(util_uitoa(data, HEX));
+    uart0_putstring("\n");
 }
 
 int main(){
@@ -274,7 +277,7 @@ int main(){
     FIO0DIR = (1<<FC_SPS_PIN) | (1<<ATV_SPS_PIN) | (1<<RC_POWER_PIN) |
               (1<<ROCKET_READY_PIN) | (1<<WIFI_POWER_PIN) | (1<<RC_TETHER);
     PINMODE1 = (0x2<<(2*(IOUT_PIN-16)));
-//    PINMODE4 = (0x2<<(2*ACOK_PIN));
+    PINMODE4 = (0x2<<(2*ACOK_PIN));
     PCONP = 0;
     pllstart_seventytwomhz();
     mam_enable();
@@ -283,14 +286,13 @@ int main(){
 	all_led_off();
 	cycle_led();
 	uart0_set_getstring_cb(serial_cb);
-	//usb_init
 	BQ24725_init(I2C2, DEFAULT);
 	if(FIO2PIN & (1<<ACOK_PIN)){
-//	    uart0_putstring("ACOK set on startup\n");
+	    uart0_putstring("ACOK set on startup\n");
 	    settings_BQ();
-		GREEN_LED_ENABLE;
+	    GREEN_LED_ON;
 	}else{
-//		uart0_putstring("ACOK not set on startup\n");
+		uart0_putstring("ACOK not set on startup\n");
 	}
 	IO2IntEnR |= 1<<ACOK_PIN;
 	IO2IntEnF |= 1<<ACOK_PIN;
@@ -304,6 +306,7 @@ int main(){
 	BQ24725_GetChargeOption(man_dat);
 	poll_wait(I2C2);
 //	 uart0_putstring("past getcharge\n");
+	//usb_init
 	USBInit(abDescriptors);
 	USBRegisterRequestHandler(REQTYPE_TYPE_VENDOR, gpio_request, abClassReqData);
 	ENABLE_INT(VIC_USB);

@@ -150,8 +150,8 @@ void mainloop(){
 		case SLEEP:
 //			BLUE_LED_OFF;
 //			uart0_putstring("\nENTERED SLEEP MODE\n");
-		    sys_mgr_sleep();
-			BLUE_LED_ON;
+//		    sys_mgr_sleep();
+//			BLUE_LED_ON;
 			break;
 		case SERIAL:
 			break;
